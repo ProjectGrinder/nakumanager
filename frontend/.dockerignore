@@ -1,0 +1,6 @@
+node_modules/
+dist/
+eslint.config.mjs
+.next/
+*.log
+.env
