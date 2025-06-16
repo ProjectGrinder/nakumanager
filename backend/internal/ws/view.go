@@ -1,13 +1,13 @@
 package ws
 
-import(
+import (
 	"log"
+
 	"github.com/gofiber/contrib/websocket"
 )
 
-
-func UpdateProjectHandler(c *websocket.Conn){
-	log.Println("update project")
+func UpdateViewHandler(c *websocket.Conn) {
+	log.Println("update view")
 
 	for {
 		if _, _, err := c.ReadMessage(); err != nil {

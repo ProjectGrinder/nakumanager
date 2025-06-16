@@ -6,8 +6,8 @@ import(
 )
 
 
-func UpdateProjectHandler(c *websocket.Conn){
-	log.Println("update project")
+func UpdateTeamHandler(c *websocket.Conn) {
+	log.Println("update team")
 
 	for {
 		if _, _, err := c.ReadMessage(); err != nil {
