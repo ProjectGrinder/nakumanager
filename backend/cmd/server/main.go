@@ -44,11 +44,7 @@ func main() {
 
 	// Websocket
 	wsGroup := app.Group("/ws", ws.WebSocketMiddleware)
-	wsGroup.Get("/workspaces", websocket.New(ws.UpdateWorkspaceHandler))
-	wsGroup.Get("/projects", websocket.New(ws.UpdateProjectHandler))
-	wsGroup.Get("/issues", websocket.New(ws.UpdateIssueHandler))
-	wsGroup.Get("/views", websocket.New(ws.UpdateViewHandler))
-	wsGroup.Get("/teams", websocket.New(ws.UpdateTeamHandler))
+	wsGroup.Get("/", websocket.New(ws.CentralWebSocketHandler))
 
 	app.Listen(":3000")
 }
