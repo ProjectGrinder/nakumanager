@@ -17,29 +17,35 @@ func main() {
 	api.Post("/login", auth.Login)
 	api.Post("/register", auth.Register)
 
+	// User
+	api.Post("/users", routes.CreateUser)
+	api.Get("/users", routes.GetAllUsers)
+	api.Get("/user", routes.GetUserByID)
+	api.Delete("/users", routes.DeleteUser)
+
 	//workspace
 	api.Post("/workspaces", routes.CreateWorkspace)
-	api.Get("/workspaces", routes.GetWorkspacesByID)
+	api.Get("/workspaces", routes.GetWorkspacesByUserID)
 	api.Delete("/workspaces", routes.DeleteWorkspace)
 
 	// Project
 	api.Post("/projects", routes.CreateProject)
-	api.Get("/projects", routes.GetProjectsByID)
+	api.Get("/projects", routes.GetProjectsByUserID)
 	api.Delete("/projects", routes.DeleteProject)
 
 	// Team
 	api.Post("/teams", routes.CreateTeam)
-	api.Get("/teams", routes.GetTeamsByID)
+	api.Get("/teams", routes.GetTeamsByUserID)
 	api.Delete("/teams", routes.DeleteTeam)
 
 	// Task
 	api.Post("/issues", routes.CreateIssue)
-	api.Get("/issues", routes.GetIssuesByID)
+	api.Get("/issues", routes.GetIssuesByUserID)
 	api.Delete("/issues", routes.DeleteIssue)
 
 	// View
 	api.Post("/views", routes.CreateView)
-	api.Get("/views", routes.GetViewsByID)
+	api.Get("/views", routes.GetViewsByUserID)
 	api.Delete("/views", routes.DeleteView)
 
 	// Websocket
