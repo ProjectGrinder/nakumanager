@@ -8,7 +8,7 @@ func CreateView(c *fiber.Ctx) error {
 	return c.SendString("Hello From Create View!")
 }
 
-func GetViewsByID(c *fiber.Ctx) error {
+func GetViewsByUserID(c *fiber.Ctx) error {
 	return c.SendString("Hello From Get Views!")
 }
 

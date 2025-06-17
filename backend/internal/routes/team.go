@@ -9,7 +9,7 @@ func CreateTeam(c *fiber.Ctx) error {
 	return c.SendString("Hello From Create Team!")
 }
 
-func GetTeamsByID(c *fiber.Ctx) error {
+func GetTeamsByUserID(c *fiber.Ctx) error {
 	return c.SendString("Hello From Get Teams!")
 }
 

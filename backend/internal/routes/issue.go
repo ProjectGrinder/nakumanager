@@ -9,7 +9,7 @@ func CreateIssue(c *fiber.Ctx) error {
 	return c.SendString("Hello From Create Issue!")
 }
 
-func GetIssuesByID(c *fiber.Ctx) error {
+func GetIssuesByUserID(c *fiber.Ctx) error {
 	return c.SendString("Hello From Get Issues!")
 }
 

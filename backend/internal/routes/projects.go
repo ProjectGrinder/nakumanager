@@ -8,7 +8,7 @@ func CreateProject(c *fiber.Ctx) error {
 	return c.SendString("Hello From Create Project!")
 }
 
-func GetProjectsByID(c *fiber.Ctx) error {
+func GetProjectsByUserID(c *fiber.Ctx) error {
 	return c.SendString("Hello From Get Projects!")
 }
 
