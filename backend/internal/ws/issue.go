@@ -2,17 +2,12 @@ package ws
 
 import (
 	"log"
+	"encoding/json"
 
 	"github.com/gofiber/contrib/websocket"
 )
 
-func UpdateIssueHandler(c *websocket.Conn) {
+func UpdateIssueHandler(c *websocket.Conn, data json.RawMessage) {
 	log.Println("update issue")
-	
-	for {
-		if _, _, err := c.ReadMessage(); err != nil {
-			log.Println("WebSocket disconnected:", err)
-			break
-		}
-	}
+
 }

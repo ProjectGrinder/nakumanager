@@ -1,7 +1,9 @@
 package ws
 
 import (
+	"encoding/json"
 	"log"
+
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 )
@@ -14,21 +16,40 @@ func WebSocketMiddleware(c *fiber.Ctx) error {
 	return fiber.ErrUpgradeRequired
 }
 
-func WebSocketHandler(c *websocket.Conn) {
-	userID := c.Params("id")
-	log.Println("Connected user:", userID)
+func CentralWebSocketHandler(c *websocket.Conn) {
+	defer c.Close()
 
 	for {
-		mt, msg, err := c.ReadMessage()
+		_, msg, err := c.ReadMessage()
 		if err != nil {
 			log.Println("read error:", err)
 			break
 		}
-		log.Printf("recv: %s", msg)
 
-		if err := c.WriteMessage(mt, msg); err != nil {
-			log.Println("write error:", err)
-			break
+		var message struct {
+			Event string          `json:"event"`
+			Data  json.RawMessage `json:"data"`
 		}
+
+		if err := json.Unmarshal(msg, &message); err != nil {
+			log.Println("json error:", err)
+			continue
+		}
+
+		switch message.Event {
+		case "update_workspace":
+			UpdateWorkspaceHandler(c, message.Data)
+		case "update_project":
+			UpdateProjectHandler(c, message.Data)
+		case "update_issue":
+			UpdateIssueHandler(c, message.Data)
+		case "update_view":
+			UpdateViewHandler(c, message.Data)
+		case "update_team":
+			UpdateTeamHandler(c, message.Data)
+		default:
+			log.Println("unknown event:", message.Event)
+		}
+
 	}
 }
