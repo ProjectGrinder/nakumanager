@@ -12,13 +12,18 @@ func SetUpRouters(app *fiber.App) {
 	api := app.Group("/api")
 
 	auth.SetUpAuthRoutes(api)
-	routes.SetUpUserRoutes(api)
-	routes.SetUpWorkspaceRoutes(api)
-	routes.SetUpProjectsRoutes(api)
-	routes.SetUpTeamRoutes(api)
-	routes.SetUpIssueRoutes(api)
-	routes.SetUpViewRoutes(api)
+
+	private := api.Group("/")
+	private.Use(auth.AuthRequired)
+
+	routes.SetUpUserRoutes(private)
+	routes.SetUpWorkspaceRoutes(private)
+	routes.SetUpProjectsRoutes(private)
+	routes.SetUpTeamRoutes(private)
+	routes.SetUpIssueRoutes(private)
+	routes.SetUpViewRoutes(private)
 
 	wsGroup := app.Group("/ws", ws.WebSocketMiddleware)
 	wsGroup.Get("/", websocket.New(ws.CentralWebSocketHandler))
 }
+
