@@ -8,7 +8,8 @@
     --error: #F87979;
     --warning: #FFD260;
     --active: #75DBCA;
-    --background: var(--bg-gray);
+    --bg-gray-tailwind: #111827;
+    --background: var(--bg-gray-tailwind);
     --foreground: var(--dark-blue);
 }
 
@@ -25,10 +26,11 @@ h3,
 h4,
 h5,
 p {
-    color: #5B6370
+    font-family: var(--font-not-sans), sans-serif;
+    margin: 0;
 }
 
-h1 {
+/* h1 {
     font-size: 2rem;
     font-weight: 700;
     font-family: var(--font-noto-sans), sans-serif;
@@ -67,4 +69,4 @@ h5 {
     font-family: var(--font-noto-sans), sans-serif;
     line-height: 0.875rem;
     margin: 0;
-}
+} */
