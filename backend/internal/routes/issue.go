@@ -5,6 +5,12 @@ import (
 )
 
 
+func SetUpIssueRoutes(api fiber.Router) {
+	api.Post("/issues", CreateIssue)
+	api.Get("/issues/:id", GetIssuesByUserID)
+	api.Delete("/issues/:id", DeleteIssue)
+}
+
 func CreateIssue(c *fiber.Ctx) error {
 	return c.SendString("Hello From Create Issue!")
 }
