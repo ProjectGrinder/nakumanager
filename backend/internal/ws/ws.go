@@ -6,14 +6,29 @@ import (
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
+	"github.com/nack098/nakumanager/internal/auth"
 )
 
 func WebSocketMiddleware(c *fiber.Ctx) error {
-	if websocket.IsWebSocketUpgrade(c) {
-		c.Locals("allowed", true)
-		return c.Next()
+	if !websocket.IsWebSocketUpgrade(c) {
+		return fiber.ErrUpgradeRequired
 	}
-	return fiber.ErrUpgradeRequired
+
+	token := c.Cookies("token")
+	if token == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Missing authentication token",
+		})
+	}
+
+	if err := auth.VerifyToken(token); err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid or expired token",
+		})
+	}
+
+	c.Locals("token", token)
+	return c.Next()
 }
 
 func CentralWebSocketHandler(c *websocket.Conn) {
