@@ -12,15 +12,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func setupWebSocketProjectApp() *fiber.App {
+func setupWebSocketIssueApp() *fiber.App {
 	app := fiber.New()
 	wsGroup := app.Group("/ws", ws.WebSocketMiddleware)
 	wsGroup.Get("/", fiberWs.New(ws.CentralWebSocketHandler))
 	return app
 }
 
-func TestUpdateProjectHandler(t *testing.T) {
-	app := setupWebSocketProjectApp()
+func TestUpdateIssueHandler(t *testing.T) {
+	app := setupWebSocketIssueApp()
 
 	go func() {
 		err := app.Listen(":3000")
@@ -37,7 +37,7 @@ func TestUpdateProjectHandler(t *testing.T) {
 	defer conn.Close()
 
 	message := map[string]interface{}{
-		"event": "update_project",
+		"event": "update_issue",
 		"data":  map[string]interface{}{},
 	}
 	payload, _ := json.Marshal(message)
@@ -47,5 +47,5 @@ func TestUpdateProjectHandler(t *testing.T) {
 	_, resp, err := conn.ReadMessage()
 	assert.NoError(t, err)
 
-	assert.Equal(t, "project updated", string(resp))
+	assert.Equal(t, "issue updated", string(resp))
 }
