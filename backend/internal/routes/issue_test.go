@@ -7,21 +7,10 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/nack098/nakumanager/internal/auth"
 	models "github.com/nack098/nakumanager/internal/models"
 	"github.com/nack098/nakumanager/internal/routes"
 	"github.com/stretchr/testify/assert"
 )
-
-func setupApp() *fiber.App {
-	app := fiber.New()
-
-	api := app.Group("/api")
-	api.Use("/issues", auth.AuthRequired)
-	routes.SetUpIssueRoutes(api)
-
-	return app
-}
 
 func TestCreateIssue_Success(t *testing.T) {
 	app := fiber.New()
@@ -206,7 +195,7 @@ func TestDeleteIssue_Forbidden(t *testing.T) {
 		Assignee: []string{"user-456"},
 	}
 
-	userID := "user-789" 
+	userID := "user-789"
 
 	app := fiber.New()
 	app.Delete("/issues/:id", func(c *fiber.Ctx) error {
@@ -231,9 +220,9 @@ func TestDeleteIssue_Unauthorized(t *testing.T) {
 	}
 
 	app := fiber.New()
-	
+
 	app.Delete("/issues/:id", func(c *fiber.Ctx) error {
-		
+
 		return routes.DeleteIssue(c)
 	})
 
