@@ -24,7 +24,6 @@ func setupApp() *fiber.App {
 	return app
 }
 
-
 func TestAuthRequired_MissingToken(t *testing.T) {
 	app := fiber.New()
 	app.Use(auth.AuthRequired)
@@ -39,7 +38,6 @@ func TestAuthRequired_MissingToken(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	assert.Contains(t, string(body), "Missing authentication token")
 }
-
 
 func TestAuthRequired_InvalidToken(t *testing.T) {
 	app := fiber.New()
@@ -56,7 +54,6 @@ func TestAuthRequired_InvalidToken(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	assert.Contains(t, string(body), "Invalid or expired token")
 }
-
 
 func TestAuthRequired_ValidToken(t *testing.T) {
 	app := fiber.New()
@@ -78,13 +75,8 @@ func TestAuthRequired_ValidToken(t *testing.T) {
 	assert.Equal(t, "OK", string(body))
 }
 
-
-
-
 func TestRegisterAndLogin_Success(t *testing.T) {
 	app := setupApp()
-
-	
 	registerPayload := `{
 		"username": "testuser",
 		"email": "test@example.com",
@@ -98,8 +90,6 @@ func TestRegisterAndLogin_Success(t *testing.T) {
 
 	bodyBytes, _ := io.ReadAll(resp.Body)
 	fmt.Println("Register Response:", string(bodyBytes))
-
-	
 	loginPayload := `{
 		"email": "test@example.com",
 		"password": "VeryStrongPass123!@#"
@@ -129,6 +119,21 @@ func TestRegisterAndLogin_Success(t *testing.T) {
 	assert.True(t, foundToken, "Token cookie should be set after login")
 }
 
+func TestRegister_InvalidEmailFormat(t *testing.T) {
+	app := setupApp()
+
+	payload := `{
+		"username": "testuser",
+		"email": "not-an-email",
+		"password": "adjsdasdaj"
+	}`
+	req := httptest.NewRequest("POST", "/api/register", strings.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 400, resp.StatusCode)
+}
+
 func TestRegister_WeakPassword(t *testing.T) {
 	app := setupApp()
 
@@ -143,7 +148,6 @@ func TestRegister_WeakPassword(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
 }
-
 
 func TestLogin_InvalidEmailFormat(t *testing.T) {
 	app := setupApp()
@@ -213,8 +217,6 @@ func TestLogin_InvalidEmailNotExists(t *testing.T) {
 	assert.Contains(t, string(bodyBytes), "Invalid email or password")
 }
 
-
-
 func TestResetLoginAttempts(t *testing.T) {
 	ip := "1.2.3.4"
 	auth.RateLimitMax = 5
@@ -236,7 +238,6 @@ func TestResetLoginAttempts(t *testing.T) {
 	assert.False(t, exists)
 }
 
-
 func TestVerifyToken_Invalid(t *testing.T) {
 	err := auth.VerifyToken("invalid.token.string")
 	assert.Error(t, err)
@@ -251,7 +252,6 @@ func TestVerifyToken_Invalid(t *testing.T) {
 	assert.Error(t, err)
 }
 
-
 func TestVerifyToken_Expired(t *testing.T) {
 	user := models.User{ID: "uid123"}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
@@ -264,9 +264,6 @@ func TestVerifyToken_Expired(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, fiber.ErrUnauthorized, err)
 }
-
-
-
 
 func TestBodyParser_InvalidJSON_Register(t *testing.T) {
 	app := setupApp()
@@ -294,8 +291,6 @@ func TestBodyParser_InvalidJSON_Login(t *testing.T) {
 	assert.Contains(t, string(body), "Invalid request body")
 }
 
-
-
 func TestRegister_UserAlreadyExists(t *testing.T) {
 	app := setupApp()
 
@@ -315,7 +310,6 @@ func TestRegister_UserAlreadyExists(t *testing.T) {
 	body, _ := io.ReadAll(resp2.Body)
 	assert.Contains(t, string(body), "User already exists")
 }
-
 
 func TestLogin_InvalidPassword(t *testing.T) {
 	app := setupApp()
