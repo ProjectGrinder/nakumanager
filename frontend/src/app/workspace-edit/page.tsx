@@ -1,11 +1,11 @@
 import WorkspaceBar from "@/components/WorkspaceBar";
-import WorkspaceInfo from "@/components/WorkspaceInfo";
+import WorkspaceEdit from "@/components/WorkspaceEdit";
 
-export default function WorkspacePage() {
+export default function WorkspaceEditPage() {
   return (
     <div className="flex flex-row">
       <WorkspaceBar />;
-      <WorkspaceInfo />
+      <WorkspaceEdit />
     </div>
   );
 }
