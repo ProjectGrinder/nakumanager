@@ -18,7 +18,7 @@ export default function WorkspaceInfo() {
     "Member 3",
   ];
   return (
-    <div className="flex flex-col p-10 text-white w-7/10">
+    <div className="flex flex-col p-10 text-white w-3/5">
       <div className="flex-row text-2xl font-bold mb-4">
         <span>Workspace Owner</span>
         <i className="fa-solid fa-gear text-2xl ml-10"></i>
