@@ -14,12 +14,12 @@ import (
 )
 
 var (
-	dummyHash, _    = argon2id.CreateHash("dummy_password", argon2id.DefaultParams)
-	LoginAttempts   = make(map[string]int)
-	LoginLock       sync.Mutex
-	RateLimitMax    = 5
-	RateLimitWindow = time.Minute * 5
-	LastAttempt     = make(map[string]time.Time)
+	dummyHash, _    = argon2id.CreateHash("dummy_password", argon2id.DefaultParams) //dummy hash ป้องกัน timming attack
+	LoginAttempts   = make(map[string]int)                                          //จำนวนการ login ที่ไม่ถูกต้อง
+	LoginLock       = sync.Mutex{}                                                  // mutex lock
+	RateLimitMax    = 5                                                             // จำนวนครั้งสูงสุดที่ 1 ip สามารถ login ผิดได้
+	RateLimitWindow = time.Minute * 5                                               // เวลารอหลัง login ผิดเงื่อนไข RateLimitMax
+	LastAttempt     = make(map[string]time.Time)                                    //เวลาล่าสุดที่ login ผิด
 
 	// Mock DB
 	Users = make(map[string]models.User)
@@ -161,6 +161,10 @@ func Register(c *fiber.Ctx) error {
 	var body models.Register
 	if err := c.BodyParser(&body); err != nil {
 		return c.Status(400).SendString(err.Error())
+	}
+
+	if _, err := mail.ParseAddress(body.Email); err != nil {
+		return c.Status(400).SendString("Invalid email format")
 	}
 
 	if _, exists := Users[body.Email]; exists {
