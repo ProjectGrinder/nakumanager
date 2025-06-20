@@ -11,7 +11,7 @@ export default function IssueList() {
       "Alice",
       "2024-01-01",
       "2024-06-01",
-      "Issue 1",
+      "issue",
     ],
     [
       "Frontend",
@@ -20,7 +20,7 @@ export default function IssueList() {
       "Bob",
       "2024-02-01",
       "2024-07-01",
-      "Issue 2",
+      "issue",
     ],
   ];
   return (

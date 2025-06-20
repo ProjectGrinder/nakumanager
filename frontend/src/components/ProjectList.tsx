@@ -11,7 +11,7 @@ export default function ProjectList() {
       "Alice",
       "2024-01-01",
       "2024-06-01",
-      "Project 1",
+      "project",
     ],
     [
       "Frontend",
@@ -20,7 +20,7 @@ export default function ProjectList() {
       "Bob",
       "2024-02-01",
       "2024-07-01",
-      "Project 2",
+      "project",
     ],
   ];
   return (

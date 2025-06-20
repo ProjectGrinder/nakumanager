@@ -28,9 +28,6 @@ export default function IssueEdit() {
   const [newAssignee, setNewAssignee] = useState("");
   const [newStatus, setNewStatus] = useState("");
   const [newPriority, setNewPriority] = useState("");
-  const addMember = () => {
-    console.log("Add new member");
-  };
   const handleCancel = () => {
     console.log("Cancel clicked");
   };

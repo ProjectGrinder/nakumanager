@@ -15,7 +15,9 @@ type SelectableItemProps = {
 
 export default function SelectableItem(props: SelectableItemProps) {
   const handleClick = () => {
-    if (props.destination != "") console.log(props.destination);
+    if (props.destination != "") {
+      console.log(props.destination);
+    }
   };
   return (
     <div
