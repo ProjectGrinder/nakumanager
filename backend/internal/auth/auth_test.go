@@ -239,7 +239,7 @@ func TestResetLoginAttempts(t *testing.T) {
 }
 
 func TestVerifyToken_Invalid(t *testing.T) {
-	err := auth.VerifyToken("invalid.token.string")
+	_, err := auth.VerifyToken("invalid.token.string")
 	assert.Error(t, err)
 	user := models.User{ID: "uid123"}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
@@ -248,7 +248,7 @@ func TestVerifyToken_Invalid(t *testing.T) {
 	})
 	tokenStr, _ := token.SignedString([]byte("secret-key"))
 
-	err = auth.VerifyToken(tokenStr)
+	_, err = auth.VerifyToken(tokenStr)
 	assert.Error(t, err)
 }
 
@@ -260,7 +260,7 @@ func TestVerifyToken_Expired(t *testing.T) {
 	})
 	tokenString, _ := token.SignedString([]byte("secret-key"))
 
-	err := auth.VerifyToken(tokenString)
+	_, err := auth.VerifyToken(tokenString)
 	assert.Error(t, err)
 	assert.Equal(t, fiber.ErrUnauthorized, err)
 }
@@ -358,4 +358,26 @@ func TestLogin_ValidPassword_SetsTokenCookie(t *testing.T) {
 		}
 	}
 	assert.True(t, found, "token cookie should be set")
+}
+func TestAuthRequired_MissingUserIDClaim(t *testing.T) {
+	app := fiber.New()
+	app.Use(auth.AuthRequired)
+	app.Get("/", func(c *fiber.Ctx) error { return c.SendString("OK") })
+
+	claims := jwt.MapClaims{
+		"exp": time.Now().Add(time.Hour).Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenStr, err := token.SignedString([]byte("secret-key"))
+	assert.NoError(t, err)
+
+	req := httptest.NewRequest("GET", "/", nil)
+	req.AddCookie(&http.Cookie{Name: "token", Value: tokenStr})
+	resp, err := app.Test(req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 401, resp.StatusCode)
+
+	body, _ := io.ReadAll(resp.Body)
+	assert.Contains(t, string(body), "Invalid user ID in token")
 }

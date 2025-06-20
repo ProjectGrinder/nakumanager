@@ -42,35 +42,41 @@ func CreateToken(user models.User) (string, error) {
 
 }
 
-func VerifyToken(tokenStr string) error {
+func VerifyToken(tokenStr string) (*jwt.Token, error) {
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		return secretKey, nil
 	})
 
 	if err != nil || !token.Valid {
-		return fiber.ErrUnauthorized
+		return nil, fiber.ErrUnauthorized
 	}
 
-	return nil
+	return token, nil
 }
 
 func AuthRequired(c *fiber.Ctx) error {
-
-	token := c.Cookies("token")
-	if token == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Missing authentication token",
-		})
+	tokenStr := c.Cookies("token")
+	if tokenStr == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Missing authentication token"})
 	}
 
-	if err := VerifyToken(token); err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Invalid or expired token",
-		})
+	token, err := VerifyToken(tokenStr)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid or expired token"})
 	}
 
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid token claims"})
+	}
+
+	userID, ok := claims["user_id"].(string)
+	if !ok || userID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid user ID in token"})
+	}
+
+	c.Locals("userID", userID)
 	return c.Next()
-
 }
 
 func ResetLoginAttempts(ip string) {

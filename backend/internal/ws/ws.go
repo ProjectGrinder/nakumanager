@@ -21,7 +21,8 @@ func WebSocketMiddleware(c *fiber.Ctx) error {
 		})
 	}
 
-	if err := auth.VerifyToken(token); err != nil {
+	//TODO: fix return token
+	if _ ,err := auth.VerifyToken(token); err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"error": "Invalid or expired token",
 		})
