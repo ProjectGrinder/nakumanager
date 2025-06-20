@@ -12,6 +12,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestSetUpIssueRoutes_Routing(t *testing.T) {
+	app := fiber.New()
+	api := app.Group("/api")
+	routes.SetUpIssueRoutes(api)
+
+	req := httptest.NewRequest("GET", "/api/issues/test-id", nil)
+	resp, err := app.Test(req)
+	assert.NoError(t, err)
+	assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
+}
+
 func TestCreateIssue_Success(t *testing.T) {
 	app := fiber.New()
 
@@ -230,4 +241,41 @@ func TestDeleteIssue_Unauthorized(t *testing.T) {
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
 	assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode) // 401
+}
+
+func TestDeleteIssue_IsAssignee(t *testing.T) {
+	issueID := "issue-1"
+	routes.Issues[issueID] = models.Issue{
+		ID:       issueID,
+		OwnerID:  "theOwner",
+		Assignee: []string{"user1"},
+	}
+
+	app := fiber.New()
+	app.Delete("/issues/:id", func(c *fiber.Ctx) error {
+		c.Locals("userID", "user1")
+		return routes.DeleteIssue(c)
+	})
+
+	req := httptest.NewRequest("DELETE", "/issues/"+issueID, nil)
+	resp, err := app.Test(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, resp.StatusCode)
+}
+
+func TestGetIssuesByUserID_MissingID(t *testing.T) {
+	app := fiber.New()
+
+	app.Get("/issues/:id?", func(c *fiber.Ctx) error {
+		return routes.GetIssuesByUserID(c)
+	})
+
+	req := httptest.NewRequest("GET", "/issues", nil)
+
+	resp, err := app.Test(req)
+	assert.NoError(t, err)
+	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
+
+	body, _ := io.ReadAll(resp.Body)
+	assert.Contains(t, string(body), `"UserID is required"`)
 }
