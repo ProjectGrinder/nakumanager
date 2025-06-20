@@ -25,9 +25,9 @@ export default function ProjectList() {
   ];
   return (
     <div className="flex flex-col p-10 text-white w-9/10">
-      <div className="flex-row text-3xl font-bold mb-6">
+      <div className="flex-row text-2xl font-bold mb-6">
         <span>All Projects</span>
-        <i className="fa-solid fa-square-plus text-3xl ml-10"></i>
+        <i className="fa-solid fa-square-plus text-2xl ml-10"></i>
       </div>
       <div className="h-150 overflow-y-auto">
         {project_list.map((project, index) => (
