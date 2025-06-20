@@ -6,7 +6,7 @@ COPY ../backend .
 
 RUN go mod tidy
 
-RUN go build -o main main.go
+RUN go build -o main ./cmd/server
 
 EXPOSE 3000
 
