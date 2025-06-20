@@ -8,7 +8,7 @@ type User struct {
 	Roles        string `json:"roles, validate:"required"`
 }
 
-func GetUserByID(id string) User {
+var GetUserByID = func(id string) User {
 	//TODO: ดึงจาก database
 	return User{ID: id}
 }
