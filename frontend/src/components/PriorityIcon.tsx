@@ -2,27 +2,27 @@ import { Tooltip } from "@mui/material";
 
 export default function PriorityIcon(priority: string) {
   switch (priority) {
-    case "low":
+    case "Low Priority":
       return (
-        <Tooltip title="Low Priority">
+        <Tooltip title={priority}>
           <i className="fa-solid fa-circle-exclamation text-green-300"></i>
         </Tooltip>
       );
-    case "medium":
+    case "Medium Priority":
       return (
-        <Tooltip title="Medium Priority">
+        <Tooltip title={priority}>
           <i className="fa-solid fa-circle-exclamation text-yellow-300"></i>
         </Tooltip>
       );
-    case "high":
+    case "High Priority":
       return (
-        <Tooltip title="High Priority">
+        <Tooltip title={priority}>
           <i className="fa-solid fa-circle-exclamation text-orange-400"></i>
         </Tooltip>
       );
-    case "urgent":
+    case "Urgent":
       return (
-        <Tooltip title="Urgent">
+        <Tooltip title={priority}>
           <i className="fa-solid fa-circle-exclamation text-red-500"></i>
         </Tooltip>
       );

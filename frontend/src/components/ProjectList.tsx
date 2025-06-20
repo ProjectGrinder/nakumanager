@@ -6,8 +6,8 @@ export default function ProjectList() {
   const project_list = [
     [
       "AI Voicebot",
-      "in-progress",
-      "high",
+      "In Progress",
+      "High Priority",
       "Alice",
       "2024-01-01",
       "2024-06-01",
@@ -15,8 +15,8 @@ export default function ProjectList() {
     ],
     [
       "Frontend",
-      "planned",
-      "medium",
+      "Planned",
+      "Medium Priority",
       "Bob",
       "2024-02-01",
       "2024-07-01",

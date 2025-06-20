@@ -2,27 +2,27 @@ import { Tooltip } from "@mui/material";
 
 export default function StatusIcon(status: string) {
   switch (status) {
-    case "planned":
+    case "Planned":
       return (
-        <Tooltip title="Planned">
+        <Tooltip title={status}>
           <i className="fa-solid fa-pen-ruler text-sky-300"></i>
         </Tooltip>
       );
-    case "in-progress":
+    case "In Progress":
       return (
-        <Tooltip title="In Progress">
+        <Tooltip title={status}>
           <i className="fa-solid fa-clock text-yellow-300"></i>
         </Tooltip>
       );
-    case "completed":
+    case "Completed":
       return (
-        <Tooltip title="Completed">
+        <Tooltip title={status}>
           <i className="fa-solid fa-circle-check text-green-300"></i>
         </Tooltip>
       );
-    case "cancelled":
+    case "Cancelled":
       return (
-        <Tooltip title="Cancelled">
+        <Tooltip title={status}>
           <i className="fa-solid fa-circle-xmark text-red-500"></i>
         </Tooltip>
       );

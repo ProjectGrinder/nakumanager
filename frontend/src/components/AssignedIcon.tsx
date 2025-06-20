@@ -9,7 +9,7 @@ export default function AssignedIcon(assigned: string) {
     );
   } else {
     return (
-      <Tooltip title={assigned}>
+      <Tooltip title="Not Assigned">
         <i className="fa-solid fa-circle-user text-gray-200"></i>
       </Tooltip>
     );
