@@ -13,6 +13,7 @@ import (
 	"github.com/nbutton23/zxcvbn-go"
 )
 
+
 var (
 	dummyHash, _    = argon2id.CreateHash("dummy_password", argon2id.DefaultParams) //dummy hash ป้องกัน timming attack
 	LoginAttempts   = make(map[string]int)                                          //จำนวนการ login ที่ไม่ถูกต้อง
