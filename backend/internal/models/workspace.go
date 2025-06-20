@@ -3,9 +3,9 @@ package model
 import "log"
 
 type Workspace struct {
-	ID      int    `json:"id"`
-	Name    string `json:"name"`
-	Members []User `json:"user"`
+	ID      string   `json:"id"`
+	Name    string   `json:"name" validate:"required,min=3,max=50,alphanumunicode"`
+	Members []string `json:"members"`
 }
 
 func (w *Workspace) Rename(newName string) {
