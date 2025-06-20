@@ -45,7 +45,7 @@ func CreateIssue(c *fiber.Ctx) error {
 	Issues[issue.ID] = issue
 	IssueMutex.Unlock()
 
-	return c.Status(fiber.StatusCreated).JSON(issue)
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"message": "issue created successfully"})
 }
 
 func GetIssuesByUserID(c *fiber.Ctx) error {
