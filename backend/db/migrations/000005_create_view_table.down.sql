@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS view_group_bys;
+DROP TABLE IF EXISTS view_issues;
+DROP TABLE IF EXISTS views;
