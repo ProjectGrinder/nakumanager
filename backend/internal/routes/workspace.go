@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	workSpaces     = make(map[string]models.Workspace)
-	workspaceMutex = sync.RWMutex{}
+	WorkSpaces     = make(map[string]models.Workspace)
+	WorkspaceMutex = sync.RWMutex{}
 	validate       = validator.New()
 )
 
@@ -48,11 +48,11 @@ func CreateWorkspace(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": errMessages})
 	}
 
-	workspaceMutex.Lock()
-	workSpaces[workspace.ID] = workspace
-	workspaceMutex.Unlock()
+	WorkspaceMutex.Lock()
+	WorkSpaces[workspace.ID] = workspace
+	WorkspaceMutex.Unlock()
 
-	return c.Status(fiber.StatusCreated).JSON(workspace)
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"message": "workspace created successfully"})
 }
 
 func GetWorkspacesByUserID(c *fiber.Ctx) error {
@@ -62,7 +62,7 @@ func GetWorkspacesByUserID(c *fiber.Ctx) error {
 	}
 
 	var result []models.Workspace
-	for _, workspace := range workSpaces {
+	for _, workspace := range WorkSpaces {
 		for _, member := range workspace.Members {
 			if member == userId {
 				result = append(result, workspace)
@@ -82,9 +82,9 @@ func DeleteWorkspace(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
 
-	workspaceMutex.RLock()
-	workspace, exists := workSpaces[workspaceID]
-	workspaceMutex.RUnlock()
+	WorkspaceMutex.RLock()
+	workspace, exists := WorkSpaces[workspaceID]
+	WorkspaceMutex.RUnlock()
 
 	if !exists {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Workspace not found"})
@@ -99,9 +99,9 @@ func DeleteWorkspace(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "You are not authorized to delete this workspace"})
 	}
 
-	workspaceMutex.Lock()
-	delete(workSpaces, workspace.ID)
-	workspaceMutex.Unlock()
+	WorkspaceMutex.Lock()
+	delete(WorkSpaces, workspace.ID)
+	WorkspaceMutex.Unlock()
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "Workspace deleted successfully",
