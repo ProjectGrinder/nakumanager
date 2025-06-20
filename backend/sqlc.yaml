@@ -1,0 +1,25 @@
+version: "2"
+sql:
+  - schema: 
+      - "db/schema/user.sql"
+      - "db/schema/workspace.sql"
+      - "db/schema/team.sql"
+      - "db/schema/project.sql"
+      - "db/schema/view.sql"
+      - "db/schema/issue.sql"
+    queries: 
+      - "db/query/user.sql"
+      - "db/query/workspace.sql"
+      - "db/query/team.sql"
+      - "db/query/project.sql"
+      - "db/query/view.sql"
+      - "db/query/issue.sql"
+    engine: "sqlite"
+    gen:
+      go:
+        package: "db"
+        out: "internal/db"
+        emit_json_tags: true
+        emit_interface: true
+        emit_empty_slices: true
+
