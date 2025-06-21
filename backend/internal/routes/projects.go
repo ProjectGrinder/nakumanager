@@ -1,25 +1,27 @@
 package routes
 
-import(
+import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/nack098/nakumanager/internal/repositories"
 )
 
-func SetUpProjectsRoutes(api fiber.Router) {
-	api.Get("/projects/:id", GetProjectsByUserID)
-	api.Post("/projects", CreateProject)
-	api.Delete("/projects/:id", DeleteProject)
+type ProjectHandler struct {
+	Repo repositories.ProjectRepository
 }
 
-func CreateProject(c *fiber.Ctx) error {
+func NewProjectHandler(repo repositories.ProjectRepository) *ProjectHandler {
+	return &ProjectHandler{Repo: repo}
+}
+
+
+func (h *ProjectHandler) CreateProject(c *fiber.Ctx) error {
 	return c.SendString("Hello From Create Project!")
 }
 
-func GetProjectsByUserID(c *fiber.Ctx) error {
+func (h *ProjectHandler) GetProjectsByUserID(c *fiber.Ctx) error {
 	return c.SendString("Hello From Get Projects!")
 }
 
-func DeleteProject(c *fiber.Ctx) error {
+func (h *ProjectHandler) DeleteProject(c *fiber.Ctx) error {
 	return c.SendString("Hello From Delete Project!")
 }
-
-

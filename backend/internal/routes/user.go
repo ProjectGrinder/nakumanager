@@ -8,15 +8,15 @@ import (
 	"github.com/nack098/nakumanager/internal/repositories"
 )
 
-type UserManage struct {
+type UserHandler struct {
 	repo repositories.UserRepository
 }
 
-func NewUserManage(repo repositories.UserRepository) *UserManage {
-	return &UserManage{repo: repo}
+func NewUserHandler(repo repositories.UserRepository) *UserHandler {
+	return &UserHandler{repo: repo}
 }
 
-func (h *UserManage) CreateUser(c *fiber.Ctx) error {
+func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	var req models.User
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid request body")
@@ -40,7 +40,7 @@ func (h *UserManage) CreateUser(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(user)
 }
 
-func (h *UserManage) GetAllUsers(c *fiber.Ctx) error {
+func (h *UserHandler) GetAllUsers(c *fiber.Ctx) error {
 	users, err := h.repo.ListUsers(c.Context())
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
@@ -48,7 +48,7 @@ func (h *UserManage) GetAllUsers(c *fiber.Ctx) error {
 	return c.JSON(users)
 }
 
-func (h *UserManage) GetUserByID(c *fiber.Ctx) error {
+func (h *UserHandler) GetUserByID(c *fiber.Ctx) error {
 	id := c.Params("id")
 	user, err := h.repo.GetUserByID(c.Context(), id)
 	if err != nil {
@@ -57,7 +57,7 @@ func (h *UserManage) GetUserByID(c *fiber.Ctx) error {
 	return c.JSON(user)
 }
 
-func (h *UserManage) DeleteUser(c *fiber.Ctx) error {
+func (h *UserHandler) DeleteUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 	err := h.repo.DeleteUser(c.Context(), id)
 	if err != nil {

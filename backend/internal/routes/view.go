@@ -2,23 +2,26 @@ package routes
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/nack098/nakumanager/internal/repositories"
 )
 
-func SetUpViewRoutes(api fiber.Router){
-	api.Post("/views", CreateView)
-	api.Get("/views/:id", GetViewsByUserID)
-	api.Delete("/views/:id", DeleteView)
+type ViewHandler struct {
+	Repo repositories.ViewRepository
 }
 
+func NewViewHandler(repo repositories.ViewRepository) *ViewHandler {
+	return &ViewHandler{Repo: repo}
+}
 
-func CreateView(c *fiber.Ctx) error {
+//TODO : implement All the functions
+func (h *ViewHandler) CreateView(c *fiber.Ctx) error {
 	return c.SendString("Hello From Create View!")
 }
 
-func GetViewsByUserID(c *fiber.Ctx) error {
+func (h *ViewHandler)GetViewsByUserID(c *fiber.Ctx) error {
 	return c.SendString("Hello From Get Views!")
 }
 
-func DeleteView(c *fiber.Ctx) error {
+func (h *ViewHandler)DeleteView(c *fiber.Ctx) error {
 	return c.SendString("Hello From Delete View!")
 }
