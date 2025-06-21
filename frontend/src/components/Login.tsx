@@ -42,7 +42,7 @@ export default function Login() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-gray-100 border-4 border-gray-400 text-gray-700 px-4 py-2 text-base rounded outline-none"
+              className="w-full bg-gray-100 border-4 border-gray-400 text-gray-700 px-4 py-2 text-base rounded-lg outline-none"
               placeholder="Enter password"
             />
           </div>

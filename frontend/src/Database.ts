@@ -1,1 +1,1 @@
-export const users = [["Hong", "hong@gmail.com", "password"],["Nack123", "Nack1234", "darknack@botnoi.com"],["Oulala", "baguette!", "jennyahl@gmail.com"]]
+export const users = [["Hong", "hong@gmail.com", "password"],["Nack123", "darknack@botnoi.com", "Nack1234"],["Oulala", "jennyahl@gmail.com", "baguette!"]]
