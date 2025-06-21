@@ -16,11 +16,18 @@ import (
 )
 
 type AuthHandler struct {
-	UserRepo repositories.UserRepository
+	UserRepo        repositories.UserRepository
+	CreateTokenFunc func(user models.User) (string, error)
+	VerifyTokenFunc func(tokenStr string) (*jwt.Token, error)
 }
 
 func NewAuthHandler(userRepo repositories.UserRepository) *AuthHandler {
-	return &AuthHandler{UserRepo: userRepo}
+	h := &AuthHandler{
+		UserRepo: userRepo,
+	}
+	h.CreateTokenFunc = h.CreateToken
+	h.VerifyTokenFunc = h.VerifyToken
+	return h
 }
 
 var (
@@ -31,6 +38,7 @@ var (
 	RateLimitWindow = time.Minute * 5
 	LastAttempt     = make(map[string]time.Time)
 	secretKey       = []byte("secret-key")
+	ResetDelay = time.Minute
 )
 
 func (h *AuthHandler) CreateToken(user models.User) (string, error) {
@@ -43,6 +51,10 @@ func (h *AuthHandler) CreateToken(user models.User) (string, error) {
 }
 
 func (h *AuthHandler) VerifyToken(tokenStr string) (*jwt.Token, error) {
+	if h.VerifyTokenFunc != nil {
+		return h.VerifyTokenFunc(tokenStr)
+	}
+
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		return secretKey, nil
 	})
@@ -137,7 +149,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	delete(LastAttempt, ip)
 	LoginLock.Unlock()
 
-	tokenString, err := h.CreateToken(models.User{ID: user.ID})
+	tokenString, err := h.CreateTokenFunc(models.User{ID: user.ID})
 	if err != nil {
 		return c.Status(500).SendString("Error while creating token")
 	}
