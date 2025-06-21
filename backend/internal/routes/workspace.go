@@ -106,8 +106,8 @@ func (h *WorkspaceHandler) DeleteWorkspace(c *fiber.Ctx) error {
 }
 
 func (h *WorkspaceHandler) AddMemberToWorkspace(c *fiber.Ctx) error {
-	workspaceID := c.Params("workspaceid")
-	if workspaceID == "" {
+	workspaceID := strings.TrimSpace(c.Params("workspaceid"))
+	if workspaceID == "" || workspaceID == "empty" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "workspace id is required"})
 	}
 
@@ -141,8 +141,8 @@ func (h *WorkspaceHandler) AddMemberToWorkspace(c *fiber.Ctx) error {
 }
 
 func (h *WorkspaceHandler) RemoveMemberFromWorkspace(c *fiber.Ctx) error {
-	workspaceID := c.Params("workspaceid")
-	if workspaceID == "" {
+	workspaceID := strings.TrimSpace(c.Params("workspaceid"))
+	if workspaceID == "" || workspaceID == "empty" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "workspace id is required"})
 	}
 
@@ -176,8 +176,8 @@ func (h *WorkspaceHandler) RemoveMemberFromWorkspace(c *fiber.Ctx) error {
 }
 
 func (h *WorkspaceHandler) RenameWorkSpace(c *fiber.Ctx) error {
-	workspaceID := c.Params("workspaceid")
-	if workspaceID == "" {
+	workspaceID := strings.TrimSpace(c.Params("workspaceid"))
+	if workspaceID == "" || workspaceID == "empty" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "workspace id is required"})
 	}
 
