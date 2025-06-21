@@ -1,11 +1,11 @@
+import ProjectEdit from "@/components/ProjectEdit";
 import WorkspaceBar from "@/components/WorkspaceBar";
-import TeamEdit from "@/components/TeamEdit";
 
-export default function TeamEditPage() {
+export default function ProjectEditPage() {
   return (
     <div className="flex flex-row">
       <WorkspaceBar />;
-      <TeamEdit />
+      <ProjectEdit />
     </div>
   );
 }

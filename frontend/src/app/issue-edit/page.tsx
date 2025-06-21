@@ -1,11 +1,11 @@
+import IssueEdit from "@/components/IssueEdit";
 import WorkspaceBar from "@/components/WorkspaceBar";
-import TeamEdit from "@/components/TeamEdit";
 
-export default function TeamEditPage() {
+export default function IssueEditPage() {
   return (
     <div className="flex flex-row">
       <WorkspaceBar />;
-      <TeamEdit />
+      <IssueEdit />
     </div>
   );
 }

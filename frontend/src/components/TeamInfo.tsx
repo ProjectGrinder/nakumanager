@@ -3,10 +3,10 @@
 export default function TeamInfo() {
   const team_members = [
     ["Admin 1", "Project Manager"],
-    ["Admin 2", "Admin"],
-    ["Member 1", "Member"],
-    ["Member 2", "Member"],
-    ["Member 3", "Member"],
+    ["Admin 2", "Designer"],
+    ["Member 1", "Frontend"],
+    ["Member 2", "Frontend"],
+    ["Member 3", "Backend"],
   ];
   return (
     <div className="flex flex-col p-10 text-white w-1/2">
@@ -33,17 +33,6 @@ export default function TeamInfo() {
             ))}
           </ul>
         </div>
-      </div>
-      <div className="flex flex-row align-center gap-10 mt-10 ml-10">
-        <button className="bg-gray-100 text-gray-700 px-8 py-2 rounded hover:bg-gray-300">
-          Projects
-        </button>
-        <button className="bg-gray-100 text-gray-700 px-8 py-2 rounded hover:bg-gray-300">
-          Issues
-        </button>
-        <button className="bg-gray-100 text-gray-700 px-8 py-2 rounded hover:bg-gray-300">
-          Views
-        </button>
       </div>
     </div>
   );
