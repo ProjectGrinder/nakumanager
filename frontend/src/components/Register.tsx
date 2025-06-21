@@ -1,25 +1,25 @@
 "use client";
-import { database1, database2, database3 } from "../Database";
+import { users } from "../Database";
 import { useState } from "react";
 export default function Register() {
   //Implement the register functionality here
   const [creatUser, setCreatUser] = useState("");
   const [creatPassWord, setCreatPassWord] = useState("");
-  const [email, setEmail] = useState("")
+  const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
 
   const handleRegister = () => {
     //Handle registration logic
     //if contion : setMessage = OK + add to the TAB the new user
-    //else : setMessage = NOT OK 
-      database1.push(creatUser);
-      database2.push(creatPassWord);
-      database3.push(email);
-      setMessage("✅ Inscription réussie !");
-      // Facultatif : réinitialiser les champs
-      setCreatUser("");
-      setCreatPassWord("");
-      setEmail("");
+    //else : setMessage = NOT OK
+    database1.push(creatUser);
+    database2.push(creatPassWord);
+    database3.push(email);
+    setMessage("✅ Inscription réussie !");
+    // Facultatif : réinitialiser les champs
+    setCreatUser("");
+    setCreatPassWord("");
+    setEmail("");
   };
 
   return (
@@ -45,13 +45,12 @@ export default function Register() {
       />
 
       <input
-        id = "email" 
-        type="text" 
+        id="email"
+        type="text"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         className="border border-gray-400 p-2 rounded ml-2"
         placeholder="enter email"
-
       />
 
       <button

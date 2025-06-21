@@ -1,58 +1,67 @@
 "use client";
-import { database1, database2} from "../Database";
 
+import Link from "next/link";
+import { users } from "../Database";
 import { useState } from "react";
 
 export default function Login() {
-  const [inputValue, setInputValue] = useState("");
-  const [passWord, setPassWord] = useState("");
-  const [message, setMessage] = useState("");
-
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
 
   const handleLogin = () => {
-    // Rendu insensible à la casse pour l'email
-    const index = database1.findIndex(
-      (email) => email.toLowerCase() === inputValue.toLowerCase()
-    );
-
-    if (index !== -1 && database2[index] === passWord) {
-      setMessage("✅");
-    } else {
-      setMessage("❌");
+    if (username == "" || password == "") {
+      alert("Please fill in every field");
+      return;
     }
+    const user = users.find((user) => user[0] === username);
+    if (user) console.log("Login Successful");
+    else alert("Username or password is incorrect");
   };
 
   return (
-    <main className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Login</h1>
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="flex flex-col items-center justify-between h-140 w-100 text-white font-bold p-10 bg-gray-700 rounded-2xl">
+        <h1 className="text-3xl pb-6">Login</h1>
+        <div className="flex flex-col w-full items-center">
+          <div className="w-full m-4">
+            <p className="text-sm pb-2">Username</p>
+            <input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full bg-gray-100 border-4 border-gray-400 text-gray-700 px-4 py-2 text-base rounded-lg outline-none"
+              placeholder="Enter username"
+            />
+          </div>
 
-      <input
-        id="username"
-        type="text"
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
-        className="border border-gray-400 p-2 rounded"
-        placeholder="enter username"
-      />
+          <div className="w-full m-4">
+            <p className="text-sm pb-2">Password</p>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-gray-100 border-4 border-gray-400 text-gray-700 px-4 py-2 text-base rounded outline-none"
+              placeholder="Enter password"
+            />
+          </div>
 
-      <input
-        id="password"
-        type="text"
-        value={passWord}
-        onChange={(e) => setPassWord(e.target.value)}
-        className="border border-gray-400 p-2 rounded ml-2"
-        placeholder="enter password"
-      />
-
-      <button
-        id="btn-check"
-        onClick={handleLogin}
-        className="ml-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-      >
-        Login
-      </button>
-
-      {message && <p className="mt-4">{message}</p>}
-    </main>
+          <button
+            id="btn-check"
+            onClick={handleLogin}
+            className="mt-6 mb-10 w-40 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700"
+          >
+            Login
+          </button>
+        </div>
+        <p className="text-color-100 font-normal text-sm">
+          Not registered yet?
+          <Link href="/register" className="ml-2 underline">
+            Register here
+          </Link>
+        </p>
+      </div>
+    </div>
   );
 }
