@@ -9,11 +9,11 @@ import (
 )
 
 type UserHandler struct {
-	repo repositories.UserRepository
+	Repo repositories.UserRepository
 }
 
 func NewUserHandler(repo repositories.UserRepository) *UserHandler {
-	return &UserHandler{repo: repo}
+	return &UserHandler{Repo: repo}
 }
 
 func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
@@ -32,16 +32,16 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 		Roles:        req.Roles,
 	}
 
-	user := h.repo.CreateUser(c.Context(), arg)
-	if user == nil {
+	err := h.Repo.CreateUser(c.Context(), arg)
+	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to create user")
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(user)
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"message": "user created"})
 }
 
 func (h *UserHandler) GetAllUsers(c *fiber.Ctx) error {
-	users, err := h.repo.ListUsers(c.Context())
+	users, err := h.Repo.ListUsers(c.Context())
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
@@ -50,7 +50,7 @@ func (h *UserHandler) GetAllUsers(c *fiber.Ctx) error {
 
 func (h *UserHandler) GetUserByID(c *fiber.Ctx) error {
 	id := c.Params("id")
-	user, err := h.repo.GetUserByID(c.Context(), id)
+	user, err := h.Repo.GetUserByID(c.Context(), id)
 	if err != nil {
 		return fiber.NewError(fiber.StatusNotFound, "user not found")
 	}
@@ -59,7 +59,7 @@ func (h *UserHandler) GetUserByID(c *fiber.Ctx) error {
 
 func (h *UserHandler) DeleteUser(c *fiber.Ctx) error {
 	id := c.Params("id")
-	err := h.repo.DeleteUser(c.Context(), id)
+	err := h.Repo.DeleteUser(c.Context(), id)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
