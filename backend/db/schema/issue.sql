@@ -4,8 +4,8 @@ CREATE TABLE issues (
     content TEXT,
     priority TEXT CHECK(priority IN ('low', 'medium', 'high')),
     status TEXT CHECK(status IN ('todo', 'doing', 'done')),
-    project_id INTEGER,
-    team_id INTEGER NOT NULL,
+    project_id TEXT NOT NULL,
+    team_id TEXT NOT NULL,
     start_date DATETIME,
     end_date DATETIME,
     label TEXT,
@@ -16,8 +16,8 @@ CREATE TABLE issues (
 );
 
 CREATE TABLE issue_assignees (
-    issue_id TEXT,
-    user_id TEXT,
+    issue_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
     PRIMARY KEY (issue_id, user_id),
     FOREIGN KEY (issue_id) REFERENCES issues(id),
     FOREIGN KEY (user_id) REFERENCES users(id)
