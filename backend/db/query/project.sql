@@ -1,11 +1,14 @@
 -- name: CreateProject :exec
-INSERT INTO projects (name, status, priority, workspace_id, leader_id, start_date, end_date, label)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+INSERT INTO projects (
+  id, name, status, priority, workspace_id, team_id, leader_id, start_date, end_date, label, created_by
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
 
 -- name: GetProjectByID :one
-SELECT id, name, status, priority, workspace_id, leader_id, start_date, end_date, label
+SELECT id, name, status, priority, workspace_id, team_id, leader_id, start_date, end_date, label, created_by
 FROM projects
 WHERE id = ?;
+
 
 -- name: DeleteProject :exec
 DELETE FROM projects WHERE id = ?;
@@ -34,3 +37,10 @@ WHERE pm.project_id = ?;
 UPDATE projects
 SET name = ?, status = ?, priority = ?, workspace_id = ?, leader_id = ?, start_date = ?, end_date = ?, label = ?
 WHERE id = ?;
+
+
+-- name: GetProjectsByUserID :many
+SELECT p.*
+FROM projects p
+JOIN project_members pm ON p.id = pm.project_id
+WHERE pm.user_id = ?;
