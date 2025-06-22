@@ -99,8 +99,8 @@ export default function ProjectEdit() {
                 <MenuItem value={"Backlog"}>Backlog</MenuItem>
                 <MenuItem value={"Planned"}>Planned</MenuItem>
                 <MenuItem value={"In Progress"}>In Progress</MenuItem>
-                <MenuItem value={"Planned"}>Completed</MenuItem>
-                <MenuItem value={"In Progress"}>Cancelled</MenuItem>
+                <MenuItem value={"Completed"}>Completed</MenuItem>
+                <MenuItem value={"Cancelled"}>Cancelled</MenuItem>
               </Select>
             </FormControl>
           </div>
