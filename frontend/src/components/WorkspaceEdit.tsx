@@ -17,7 +17,6 @@ export default function WorkspaceEdit() {
   const [info, setInfo] = useState(member_info);
   const [name, setName] = useState(workspaceName);
   const [copied, setCopied] = useState(false);
-  const [role, setRole] = useState("");
   const sendInvite = async () => {
     try {
       await navigator.clipboard.writeText("Copy successful!");
@@ -62,11 +61,9 @@ export default function WorkspaceEdit() {
         <table className="table-auto text-lg w-full text-left text-white mt-6 h-80 overflow-y-auto">
           <tbody>
             {info.map((member, index) => (
-              <tr>
-                <td className="w-[60%] p-3" key={index}>
-                  {member[0]}
-                </td>
-                <td className="w-[30%] p-3" key={index}>
+              <tr key={index}>
+                <td className="w-[60%] p-3">{member[0]}</td>
+                <td className="w-[30%] p-3">
                   <FormGroup>
                     <FormControlLabel
                       control={<Switch checked={member[1] === "Admin"} />}

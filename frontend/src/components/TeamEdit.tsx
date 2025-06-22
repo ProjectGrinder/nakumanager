@@ -74,14 +74,11 @@ export default function TeamEdit() {
         <table className="table-auto text-lg w-full text-left text-white mt-6 h-80 max-h-80 overflow-y-auto">
           <tbody>
             {teamList.map((member, index) => (
-              <tr>
-                <td
-                  className="w-[50%] max-w-40 p-3 whitespace-nowrap overflow-x-hidden text-ellipsis"
-                  key={index}
-                >
+              <tr key={index}>
+                <td className="w-[50%] max-w-40 p-3 whitespace-nowrap overflow-x-hidden text-ellipsis">
                   {member[0]}
                 </td>
-                <td className="w-[40%] p-3" key={index}>
+                <td className="w-[40%] p-3">
                   <FormControl fullWidth sx={style}>
                     <TextField
                       id="outlined-basic"
