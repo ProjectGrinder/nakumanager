@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 export default function WorkspaceInfo() {
   const workspace_owner = "John Doe";
   const admin_list = ["Admin 1", "Admin 2", "Admin 3"];
@@ -17,11 +19,18 @@ export default function WorkspaceInfo() {
     "Member 2",
     "Member 3",
   ];
+  const router = useRouter();
+  const editWorkspace = () => {
+    router.push("/workspace-edit");
+  };
   return (
     <div className="flex flex-col p-10 text-white w-3/5">
       <div className="flex-row text-2xl font-bold mb-4">
         <span>Workspace Owner</span>
-        <i className="fa-solid fa-gear text-2xl ml-10"></i>
+        <i
+          className="fa-solid fa-gear text-2xl ml-10"
+          onClick={editWorkspace}
+        ></i>
       </div>
       <span className="text-lg font-normal mb-10">{workspace_owner}</span>
       <div className="flex flex-row justify-between mb-4">

@@ -1,16 +1,19 @@
 "use client";
+
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+
 export default function WorkspaceBar() {
   const currentWorkspace = "Workspace 1";
   const teams = ["Team 1", "Team 2", "Team 3"];
   const workspaces = ["Workspace 1", "Workspace 2", "Workspace 3"];
   const joinedWorkspaces = ["Joined Workspace 1", "Joined Workspace 2"];
+  const router = useRouter();
   const handleLogout = () => {
-    // Logic for logging out the user
-    console.log("User logged out");
+    router.push("/login");
   };
   const createWorkspace = () => {
-    // Logic for creating a new workspace
-    console.log("Create new workspace");
+    router.push("/workspace-edit");
   };
   return (
     <div className="flex-column items-center justify-between p-4 border-r-1 border-gray-300 bg-gray-800 text-white w-60 h-screen">
@@ -31,7 +34,7 @@ export default function WorkspaceBar() {
       <ul className="flex-column items-start justify-start h-3/10 overflow-y-auto">
         {workspaces.map((workspace, index) => (
           <li key={index} className="p-2 cursor-pointer hover:underline">
-            {workspace}
+            <Link href={"/workspace"}>{workspace}</Link>
             {workspace === currentWorkspace && (
               <ul className="ml-4 mt-2">
                 {teams.map((team, tIdx) => (
@@ -39,7 +42,7 @@ export default function WorkspaceBar() {
                     key={tIdx}
                     className="text-sm hover:bg-gray-700 cursor-pointer text-gray-400 pl-2 py-1"
                   >
-                    {team}
+                    <Link href={"/team"}>{team}</Link>
                   </li>
                 ))}
               </ul>
@@ -53,7 +56,7 @@ export default function WorkspaceBar() {
       <ul className="flex-column items-start justify-start h-3/10 overflow-y-auto">
         {joinedWorkspaces.map((workspace, index) => (
           <li key={index} className="p-2 cursor-pointer hover:underline">
-            {workspace}
+            <Link href={"/workspace"}>{workspace}</Link>
             {workspace === currentWorkspace && (
               <ul className="ml-4 mt-2">
                 {teams.map((team, tIdx) => (
@@ -61,7 +64,7 @@ export default function WorkspaceBar() {
                     key={tIdx}
                     className="text-xs hover:bg-gray-700 cursor-pointer text-gray-400 pl-2 py-1"
                   >
-                    {team}
+                    <Link href={"/team"}>{team}</Link>
                   </li>
                 ))}
               </ul>
