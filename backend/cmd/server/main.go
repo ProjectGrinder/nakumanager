@@ -35,6 +35,11 @@ func main() {
 	}
 	defer conn.Close()
 
+	_, err = conn.Exec("PRAGMA foreign_keys = ON;")
+	if err != nil {
+		log.Fatal("failed to enable foreign keys:", err)
+	}
+
 	runMigrations()
 
 	SetUpRouters(app, conn)
