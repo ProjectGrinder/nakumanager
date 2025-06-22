@@ -8,6 +8,7 @@ import {
   TextField,
 } from "@mui/material";
 import { useState } from "react";
+import SelectableItem from "./SelectableItem";
 
 export default function ViewEdit() {
   const view = {
@@ -24,6 +25,26 @@ export default function ViewEdit() {
     },
     destination: "",
   };
+  const issue_list = [
+    [
+      "Issue 1",
+      "In Progress",
+      "Urgent",
+      "Alice",
+      "2024-01-01",
+      "2024-06-01",
+      "Issue 1",
+    ],
+    [
+      "Frontend",
+      "Completed",
+      "Low Priority",
+      "Bob",
+      "2024-02-01",
+      "2024-07-01",
+      "Issue 2",
+    ],
+  ];
   const [name, setName] = useState(view.name);
   const [status, setStatus] = useState(view.grouping.status);
   const [priority, setPriority] = useState(view.grouping.priority);
@@ -70,7 +91,7 @@ export default function ViewEdit() {
           placeholder="Enter project name"
         />
       </div>
-      <div className="flex flex-col w-200 h-100">
+      <div className="flex flex-col w-200 mb-6">
         <span className="text-xl font-bold mb-8">Group by:</span>
         <div className="flex flex-row gap-4">
           <FormControl fullWidth sx={style}>
@@ -172,6 +193,20 @@ export default function ViewEdit() {
             />
           </div>
         </div>
+      </div>
+      <div className="w-300 overflow-y-auto">
+        {issue_list.map((issue, index) => (
+          <SelectableItem
+            name={issue[0]}
+            status={issue[1]}
+            priority={issue[2]}
+            assigned={issue[3]}
+            startDate={issue[4]}
+            endDate={issue[5]}
+            destination={issue[6]}
+            key={index}
+          />
+        ))}
       </div>
       <div className="flex flex-row fixed bottom-20 right-40">
         <button className="text-gray-100 px-8 py-2" onClick={handleCancel}>
