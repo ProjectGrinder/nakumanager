@@ -33,11 +33,6 @@ export default function WorkspaceEdit() {
   const handleSave = () => {
     console.log("Save clicked");
   };
-  const handleChange = (event: SelectChangeEvent, index: number) => {
-    setRole(event.target.value as string);
-    member_info[index][1] = role;
-    console.log(role, member_info[index][1]); //label doesn't change
-  };
   const removeMember = (index: number) => {
     member_info.splice(index, 1);
     console.log(`Member at index ${index} removed`);
