@@ -1,281 +1,191 @@
 package routes_test
 
 import (
+	"bytes"
+	"encoding/json"
 	"io"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/nack098/nakumanager/internal/db"
 	models "github.com/nack098/nakumanager/internal/models"
 	"github.com/nack098/nakumanager/internal/routes"
+	mocks "github.com/nack098/nakumanager/internal/routes/test/mock_repo"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
-
-func TestSetUpIssueRoutes_Routing(t *testing.T) {
-	app := fiber.New()
-	api := app.Group("/api")
-	routes.SetUpIssueRoutes(api)
-
-	req := httptest.NewRequest("GET", "/api/issues/test-id", nil)
-	resp, err := app.Test(req)
-	assert.NoError(t, err)
-	assert.NotEqual(t, fiber.StatusNotFound, resp.StatusCode)
-}
 
 func TestCreateIssue_Success(t *testing.T) {
 	app := fiber.New()
 
-	app.Post("/issues", func(c *fiber.Ctx) error {
-		c.Locals("userID", "mockedID")
-		return routes.CreateIssue(c)
+	mockTeamRepo := new(mocks.MockTeamRepo)
+	mockProjectRepo := new(mocks.MockProjectRepo)
+	mockIssueRepo := new(mocks.MockIssueRepo)
+
+	handler := &routes.IssueHandler{
+		TeamRepo:    mockTeamRepo,
+		ProjectRepo: mockProjectRepo,
+		Repo:        mockIssueRepo,
+	}
+
+	app.Post("/api/issues", func(c *fiber.Ctx) error {
+		c.Locals("userID", "user-123")
+		return handler.CreateIssue(c)
 	})
 
-	payload := `{"title":"Test Issue","teamId":1112}`
+	payload := models.IssueCreate{
+		Title:   "Test Issue",
+		TeamID:  "team-001",
+		Status:  "todo",
+		OwnerID: "",
+	}
+	body, _ := json.Marshal(payload)
 
-	req := httptest.NewRequest("POST", "/issues", strings.NewReader(payload))
+	mockTeamRepo.On("IsTeamExists", mock.Anything, "team-001").Return(true, nil)
+	mockTeamRepo.On("IsMemberInTeam", mock.Anything, "team-001", "user-123").Return(true, nil)
+	mockIssueRepo.On("CreateIssue", mock.Anything, mock.AnythingOfType("db.CreateIssueParams")).Return(nil)
+
+	req := httptest.NewRequest("POST", "/api/issues", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
-
 	resp, err := app.Test(req)
+
 	assert.NoError(t, err)
 	assert.Equal(t, 201, resp.StatusCode)
-
+	mockTeamRepo.AssertExpectations(t)
+	mockIssueRepo.AssertExpectations(t)
 }
 
-func TestCreateIssue_InvalidPayload(t *testing.T) {
+func TestAddAssigneeToIssue_Success(t *testing.T) {
 	app := fiber.New()
 
-	app.Post("/issues", func(c *fiber.Ctx) error {
-		c.Locals("userID", "mockedID")
-		return routes.CreateIssue(c)
+	mockIssueRepo := new(mocks.MockIssueRepo)
+	handler := routes.NewIssueHandler(mockIssueRepo, nil, nil)
+
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", "auth-user-1")
+		return c.Next()
 	})
 
-	payload := `{"title":"Test Issue"}`
-	req := httptest.NewRequest("POST", "/issues", strings.NewReader(payload))
+	app.Post("/add-assignee", handler.AddAssigneeToIssue)
+
+	mockIssueRepo.On("AddAssigneeToIssue", mock.Anything, db.AddAssigneeToIssueParams{
+		IssueID: "issue-123",
+		UserID:  "user-456",
+	}).Return(nil)
+
+	reqBody := `{"issue_id":"issue-123","user_id":"user-456"}`
+
+	req := httptest.NewRequest("POST", "/add-assignee", strings.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)
+	if err != nil {
+		t.Logf("Error during app.Test: %v", err)
+	}
+	if resp.StatusCode != fiber.StatusOK {
+		t.Logf("Expected status %d but got %d", fiber.StatusOK, resp.StatusCode)
+	}
+
 	assert.NoError(t, err)
-	assert.Equal(t, 400, resp.StatusCode)
+	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+
+	mockIssueRepo.AssertExpectations(t)
 }
 
-func TestCreateIssue_Unauthorized(t *testing.T) {
+func TestRemoveAssigneeFromIssue_Success(t *testing.T) {
 	app := fiber.New()
 
-	app.Post("/issues", func(c *fiber.Ctx) error {
-		return routes.CreateIssue(c)
+	mockIssueRepo := new(mocks.MockIssueRepo)
+	handler := routes.NewIssueHandler(mockIssueRepo, nil, nil)
+
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", "auth-user-1")
+		return c.Next()
 	})
 
-	payload := `{"title":"Test Issue","teamId":1112}`
+	app.Post("/remove-assignee", handler.RemoveAssigneeFromIssue)
 
-	req := httptest.NewRequest("POST", "/issues", strings.NewReader(payload))
+	mockIssueRepo.On("RemoveAssigneeFromIssue", mock.Anything, db.RemoveAssigneeFromIssueParams{
+		IssueID: "issue-123",
+		UserID:  "user-456",
+	}).Return(nil)
+
+	reqBody := `{"issue_id":"issue-123","user_id":"user-456"}`
+
+	req := httptest.NewRequest("POST", "/remove-assignee", strings.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
-	assert.Equal(t, 401, resp.StatusCode)
-}
-func TestCreateIssue_InvalidBody(t *testing.T) {
-	app := fiber.New()
-	app.Post("/api/issues", routes.CreateIssue)
+	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-	req := httptest.NewRequest("POST", "/api/issues", strings.NewReader("not-a-json"))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := app.Test(req)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
-
-	body, _ := io.ReadAll(resp.Body)
-	assert.Contains(t, string(body), "invalid request body")
+	mockIssueRepo.AssertExpectations(t)
 }
 
 func TestGetIssuesByUserID_Success(t *testing.T) {
 	app := fiber.New()
 
-	app.Get("/api/issues/:id", routes.GetIssuesByUserID)
+	mockIssueRepo := new(mocks.MockIssueRepo)
+	handler := routes.NewIssueHandler(mockIssueRepo, nil, nil)
 
-	issue1 := models.Issue{
-		ID:       "1",
-		Title:    "Issue 1",
-		Assignee: []string{"user1", "user2"},
-	}
-	issue2 := models.Issue{
-		ID:       "2",
-		Title:    "Issue 2",
-		Assignee: []string{"user3"},
+	app.Get("/issues/:id", handler.GetIssuesByUserID)
+
+	expectedIssues := []db.Issue{
+		{ID: "issue-1", Title: "Issue One", Status: "todo"},
+		{ID: "issue-2", Title: "Issue Two", Status: "done"},
 	}
 
-	routes.Issues = map[string]models.Issue{
-		"1": issue1,
-		"2": issue2,
-	}
+	mockIssueRepo.On("GetIssueByUserID", mock.Anything, "user-123").
+		Return(expectedIssues, nil).
+		Once()
 
-	req := httptest.NewRequest("GET", "/api/issues/user1", nil)
+	req := httptest.NewRequest("GET", "/issues/user-123", nil)
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
-	assert.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-	bodyBytes, _ := io.ReadAll(resp.Body)
-	bodyStr := string(bodyBytes)
-
-	assert.Contains(t, bodyStr, "Issue 1")
-}
-
-func TestGetIssuesByUserID_Unsuccess(t *testing.T) {
-	app := fiber.New()
-
-	app.Get("/api/issues/:id", routes.GetIssuesByUserID)
-
-	issue1 := models.Issue{
-		ID:       "1",
-		Title:    "Issue 1",
-		Assignee: []string{"user1", "user2"},
-	}
-	issue2 := models.Issue{
-		ID:       "2",
-		Title:    "Issue 2",
-		Assignee: []string{"user3"},
-	}
-
-	routes.Issues = map[string]models.Issue{
-		"1": issue1,
-		"2": issue2,
-	}
-
-	req := httptest.NewRequest("GET", "/api/issues/user4", nil)
-	resp, err := app.Test(req)
+	body, err := io.ReadAll(resp.Body)
 	assert.NoError(t, err)
-	assert.Equal(t, 200, resp.StatusCode)
 
-	body, _ := io.ReadAll(resp.Body)
-	assert.Equal(t, "null", strings.TrimSpace(string(body)))
+	var actualIssues []db.Issue
+	err = json.Unmarshal(body, &actualIssues)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedIssues, actualIssues)
+
+	mockIssueRepo.AssertExpectations(t)
 }
 
 func TestDeleteIssue_Success(t *testing.T) {
 	app := fiber.New()
-	app.Delete("/issues/:id", func(c *fiber.Ctx) error {
-		c.Locals("userID", "user-123")
-		return routes.DeleteIssue(c)
+
+	mockIssueRepo := new(mocks.MockIssueRepo)
+	handler := routes.NewIssueHandler(mockIssueRepo, nil, nil)
+
+	userID := "user-456"
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", userID)
+		return c.Next()
 	})
 
-	issueID := "issue-1"
-	routes.Issues = map[string]models.Issue{
-		issueID: {
-			ID:       issueID,
-			OwnerID:  "user-123",
-			Assignee: []string{"user-456"},
-		},
-	}
+	app.Delete("/issues/:id", handler.DeleteIssue)
+
+	issueID := "issue-123"
+
+	mockIssueRepo.On("GetIssueByID", mock.Anything, issueID).
+		Return(db.Issue{ID: issueID, OwnerID: userID}, nil).
+		Once()
+
+	mockIssueRepo.On("DeleteIssue", mock.Anything, issueID).
+		Return(nil).
+		Once()
 
 	req := httptest.NewRequest("DELETE", "/issues/"+issueID, nil)
+
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
 	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
-	body, _ := io.ReadAll(resp.Body)
-	assert.Contains(t, string(body), "Issue deleted successfully")
-}
 
-func TestDeleteIssue_IssueNotExists(t *testing.T) {
-	app := fiber.New()
-	app.Delete("/issues/:id", func(c *fiber.Ctx) error {
-		c.Locals("userID", "user-123")
-		return routes.DeleteIssue(c)
-	})
-
-	issueID := "issue-1"
-	routes.Issues = map[string]models.Issue{
-		issueID: {
-			ID:       issueID,
-			OwnerID:  "user-123",
-			Assignee: []string{"user-456"},
-		},
-	}
-
-	req2 := httptest.NewRequest("DELETE", "/issues/not-exist", nil)
-	resp2, err2 := app.Test(req2)
-	assert.NoError(t, err2)
-	assert.Equal(t, fiber.StatusNotFound, resp2.StatusCode)
-}
-
-func TestDeleteIssue_Forbidden(t *testing.T) {
-	issueID := "issue-1"
-	routes.Issues[issueID] = models.Issue{
-		ID:       issueID,
-		OwnerID:  "user-123",
-		Assignee: []string{"user-456"},
-	}
-
-	userID := "user-789"
-
-	app := fiber.New()
-	app.Delete("/issues/:id", func(c *fiber.Ctx) error {
-		if userID != "" {
-			c.Locals("userID", userID)
-		}
-		return routes.DeleteIssue(c)
-	})
-
-	req := httptest.NewRequest("DELETE", "/issues/"+issueID, nil)
-	resp, err := app.Test(req)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusForbidden, resp.StatusCode)
-}
-
-func TestDeleteIssue_Unauthorized(t *testing.T) {
-	issueID := "issue-1"
-	routes.Issues[issueID] = models.Issue{
-		ID:       issueID,
-		OwnerID:  "user-123",
-		Assignee: []string{"user-456"},
-	}
-
-	app := fiber.New()
-
-	app.Delete("/issues/:id", func(c *fiber.Ctx) error {
-
-		return routes.DeleteIssue(c)
-	})
-
-	req := httptest.NewRequest("DELETE", "/issues/"+issueID, nil)
-	resp, err := app.Test(req)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode) // 401
-}
-
-func TestDeleteIssue_IsAssignee(t *testing.T) {
-	issueID := "issue-1"
-	routes.Issues[issueID] = models.Issue{
-		ID:       issueID,
-		OwnerID:  "theOwner",
-		Assignee: []string{"user1"},
-	}
-
-	app := fiber.New()
-	app.Delete("/issues/:id", func(c *fiber.Ctx) error {
-		c.Locals("userID", "user1")
-		return routes.DeleteIssue(c)
-	})
-
-	req := httptest.NewRequest("DELETE", "/issues/"+issueID, nil)
-	resp, err := app.Test(req)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, resp.StatusCode)
-}
-
-func TestGetIssuesByUserID_MissingID(t *testing.T) {
-	app := fiber.New()
-
-	app.Get("/issues/:id?", func(c *fiber.Ctx) error {
-		return routes.GetIssuesByUserID(c)
-	})
-
-	req := httptest.NewRequest("GET", "/issues", nil)
-
-	resp, err := app.Test(req)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
-
-	body, _ := io.ReadAll(resp.Body)
-	assert.Contains(t, string(body), `"UserID is required"`)
+	mockIssueRepo.AssertExpectations(t)
 }

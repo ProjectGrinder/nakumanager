@@ -37,7 +37,7 @@ func SetUpRouters(app *fiber.App, conn *sql.DB) {
 	workspaceHandler := routes.NewWorkspaceHandler(workspaceRepo, userRepo)
 	teamHandler := routes.NewTeamHandler(teamRepo, workspaceRepo)
 	projectHandler := routes.NewProjectHandler(projectRepo, teamRepo)
-	issueHandler := routes.NewIssueHandler(issueRepo)
+	issueHandler := routes.NewIssueHandler(issueRepo, teamRepo, projectRepo)
 	viewHandler := routes.NewViewHandler(viewRepo)
 
 	api := app.Group("/api")

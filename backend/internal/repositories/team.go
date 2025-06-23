@@ -22,6 +22,7 @@ type TeamRepository interface {
 	GetOwnerByTeamID(ctx context.Context, teamID string) (string, error)
 	GetLeaderByTeamID(ctx context.Context, userID string) (string, error)
 	IsMemberInTeam(ctx context.Context, teamID, userID string) (bool, error)
+	IsTeamExists(ctx context.Context, teamID string) (bool, error)
 }
 
 type teamRepo struct {
@@ -92,6 +93,14 @@ func (r *teamRepo) IsMemberInTeam(ctx context.Context, teamID, userID string) (b
 		TeamID: teamID,
 		UserID: userID,
 	})
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (r *teamRepo) IsTeamExists(ctx context.Context, teamID string) (bool, error) {
+	count, err := r.queries.IsTeamExists(ctx, teamID)
 	if err != nil {
 		return false, err
 	}
