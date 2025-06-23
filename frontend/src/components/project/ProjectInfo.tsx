@@ -1,8 +1,8 @@
 "use client";
 
-import DateFormat from "./DateFormat";
-import PriorityIcon from "./PriorityIcon";
-import StatusIcon from "./StatusIcon";
+import DateFormat from "../DateFormat";
+import PriorityIcon from "../PriorityIcon";
+import StatusIcon from "../StatusIcon";
 
 export default function ProjectInfo() {
   const project = {

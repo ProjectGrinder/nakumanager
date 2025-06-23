@@ -1,5 +1,5 @@
 import WorkspaceBar from "@/components/WorkspaceBar";
-import ViewList from "@/components/ViewList";
+import ViewList from "@/components/view/ViewList";
 
 export default function ViewListPage() {
   return (

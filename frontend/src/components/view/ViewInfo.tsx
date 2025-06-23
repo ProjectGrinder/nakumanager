@@ -1,6 +1,6 @@
 "use client";
 
-import SelectableItem from "./SelectableItem";
+import SelectableItem from "../SelectableItem";
 
 export default function ViewInfo() {
   const issue_list = [

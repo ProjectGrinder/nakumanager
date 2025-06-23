@@ -1,5 +1,5 @@
 import WorkspaceBar from "@/components/WorkspaceBar";
-import ProjectList from "@/components/ProjectList";
+import ProjectList from "@/components/project/ProjectList";
 
 export default function ProjectListPage() {
   return (

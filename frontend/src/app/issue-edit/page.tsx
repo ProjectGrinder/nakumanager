@@ -1,4 +1,4 @@
-import IssueEdit from "@/components/IssueEdit";
+import IssueEdit from "@/components/issue/IssueEdit";
 import WorkspaceBar from "@/components/WorkspaceBar";
 
 export default function IssueEditPage() {

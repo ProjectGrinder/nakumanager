@@ -1,5 +1,5 @@
 import WorkspaceBar from "@/components/WorkspaceBar";
-import WorkspaceInfo from "@/components/WorkspaceInfo";
+import WorkspaceInfo from "@/components/workspace/WorkspaceInfo";
 
 export default function WorkspacePage() {
   return (

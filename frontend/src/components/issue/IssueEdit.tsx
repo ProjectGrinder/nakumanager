@@ -7,8 +7,8 @@ import {
   MenuItem,
   TextField,
 } from "@mui/material";
-import PriorityIcon from "./PriorityIcon";
-import StatusIcon from "./StatusIcon";
+import PriorityIcon from "../PriorityIcon";
+import StatusIcon from "../StatusIcon";
 import { useState } from "react";
 
 export default function IssueEdit() {
@@ -30,6 +30,7 @@ export default function IssueEdit() {
   const [priority, setPriority] = useState(issue.priority);
   const [assignee, setAssignee] = useState(issue.assignee);
   const [project, setProject] = useState(issue.project);
+  const [startDate, setStartDate] = useState(issue.startDate);
   const [endDate, setEndDate] = useState(issue.endDate);
   const [label, setLabel] = useState(issue.label);
   const style = {
@@ -156,14 +157,25 @@ export default function IssueEdit() {
             </FormControl>
           </div>
         </div>
-        <div>
-          <span>End Date:</span>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="bg-gray-100 text-gray-700 p-2 ml-4 rounded outline-none"
-          />
+        <div className="flex flex-row justify-between mb-6">
+          <div>
+            <span>Start Date:</span>
+            <input
+              className="bg-gray-100 text-gray-700 p-2 ml-4 rounded outline-none"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </div>
+          <div>
+            <span>End Date:</span>
+            <input
+              className="bg-gray-100 text-gray-700 p-2 ml-4 rounded outline-none"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </div>
         </div>
         <div className="mt-4">
           <span className="mb-6">Label:</span>

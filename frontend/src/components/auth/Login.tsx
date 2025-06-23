@@ -1,21 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { users } from "../Database";
+import { users } from "../../Database";
 import { useState } from "react";
 
 export default function Login() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const handleLogin = () => {
-    if (username == "" || password == "") {
+    if (email == "" || password == "") {
       alert("Please fill in every field");
       return;
     }
-    const user = users.find((user) => user[0] === username);
+    const user = users.find((user) => user[1] === email);
     if (user) console.log("Login Successful");
-    else alert("Username or password is incorrect");
+    else alert("Email or password is incorrect");
   };
 
   return (
@@ -24,12 +24,12 @@ export default function Login() {
         <h1 className="text-3xl pb-6">Login</h1>
         <div className="flex flex-col w-full items-center">
           <div className="w-full m-4">
-            <p className="text-sm pb-2">Username</p>
+            <p className="text-sm pb-2">Email</p>
             <input
               id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-gray-100 border-4 border-gray-400 text-gray-700 px-4 py-2 text-base rounded-lg outline-none"
               placeholder="Enter username"
             />

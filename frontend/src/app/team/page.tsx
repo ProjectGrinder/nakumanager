@@ -1,5 +1,5 @@
 import WorkspaceBar from "@/components/WorkspaceBar";
-import TeamInfo from "@/components/TeamInfo";
+import TeamInfo from "@/components/team/TeamInfo";
 
 export default function TeamPage() {
   return (

@@ -1,5 +1,5 @@
 import WorkspaceBar from "@/components/WorkspaceBar";
-import ViewInfo from "@/components/ViewInfo";
+import ViewInfo from "@/components/view/ViewInfo";
 
 export default function ViewPage() {
   return (

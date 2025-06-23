@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { users } from "../Database";
+import { users } from "../../Database";
 import { useState } from "react";
 export default function Register() {
   const [username, setUsername] = useState("");

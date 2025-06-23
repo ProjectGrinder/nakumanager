@@ -1,5 +1,5 @@
 import WorkspaceBar from "@/components/WorkspaceBar";
-import TeamEdit from "@/components/TeamEdit";
+import TeamEdit from "@/components/team/TeamEdit";
 
 export default function TeamEditPage() {
   return (
