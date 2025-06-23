@@ -7,6 +7,9 @@ import (
 
 func SetUpTeamRoutes(api fiber.Router, h *routes.TeamHandler) {
 	api.Post("/teams", h.CreateTeam)
-	api.Get("/teams/:id", h.GetTeamsByUserID)
+	api.Get("/teams", h.GetTeamsByUserID)
+	api.Post("/teams/members", h.AddMemberToTeam)
+	api.Delete("/teams/members", h.RemoveMemberFromTeam)
 	api.Delete("/teams/:id", h.DeleteTeam)
+
 }

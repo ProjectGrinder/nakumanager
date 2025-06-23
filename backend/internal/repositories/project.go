@@ -11,8 +11,9 @@ type ProjectRepository interface {
 	CreateProject(ctx context.Context, data db.CreateProjectParams) error
 	DeleteProject(ctx context.Context, id string) error
 	GetProjectByID(ctx context.Context, id string) (db.Project, error)
+	GetProjectsByUserID(ctx context.Context, userID string) ([]db.Project, error)
 	ListProjectMembers(ctx context.Context, projectID string) ([]db.User, error)
-	ListProjectsByWorkspace(ctx context.Context, workspaceID string) ([]db.Project, error)
+	ListProjectsByWorkspace(ctx context.Context, workspaceID string) ([]db.ListProjectsByWorkspaceRow, error)
 	RemoveMemberFromProject(ctx context.Context, data db.RemoveMemberFromProjectParams) error
 	UpdateProject(ctx context.Context, data db.UpdateProjectParams) error
 }
@@ -41,11 +42,15 @@ func (r *projectRepo) GetProjectByID(ctx context.Context, id string) (db.Project
 	return r.queries.GetProjectByID(ctx, id)
 }
 
+func (r *projectRepo) GetProjectsByUserID(ctx context.Context, userID string) ([]db.Project, error) {
+	return r.queries.GetProjectsByUserID(ctx, userID)
+}
+
 func (r *projectRepo) ListProjectMembers(ctx context.Context, projectID string) ([]db.User, error) {
 	return r.queries.ListProjectMembers(ctx, projectID)
 }
 
-func (r *projectRepo) ListProjectsByWorkspace(ctx context.Context, workspaceID string) ([]db.Project, error) {
+func (r *projectRepo) ListProjectsByWorkspace(ctx context.Context, workspaceID string) ([]db.ListProjectsByWorkspaceRow, error) {
 	return r.queries.ListProjectsByWorkspace(ctx, workspaceID)
 }
 

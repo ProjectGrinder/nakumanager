@@ -26,8 +26,28 @@ func NewAuthHandler(userRepo repositories.UserRepository) *AuthHandler {
 		UserRepo: userRepo,
 	}
 	h.CreateTokenFunc = h.CreateToken
-	h.VerifyTokenFunc = h.VerifyToken
+	h.VerifyTokenFunc = h.verifyTokenInternal  
 	return h
+}
+
+func (h *AuthHandler) verifyTokenInternal(tokenStr string) (*jwt.Token, error) {
+	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+		return secretKey, nil
+	})
+
+	if err != nil || !token.Valid {
+		return nil, fiber.ErrUnauthorized
+	}
+
+	return token, nil
+}
+
+func (h *AuthHandler) VerifyToken(tokenStr string) (*jwt.Token, error) {
+	if h.VerifyTokenFunc != nil {
+		return h.VerifyTokenFunc(tokenStr)
+	}
+
+	return h.verifyTokenInternal(tokenStr)
 }
 
 var (
@@ -49,23 +69,6 @@ func (h *AuthHandler) CreateToken(user models.User) (string, error) {
 
 	return token.SignedString(secretKey)
 }
-
-func (h *AuthHandler) VerifyToken(tokenStr string) (*jwt.Token, error) {
-	if h.VerifyTokenFunc != nil {
-		return h.VerifyTokenFunc(tokenStr)
-	}
-
-	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-		return secretKey, nil
-	})
-
-	if err != nil || !token.Valid {
-		return nil, fiber.ErrUnauthorized
-	}
-
-	return token, nil
-}
-
 func (h *AuthHandler) AuthRequired(c *fiber.Ctx) error {
 	tokenStr := c.Cookies("token")
 	if tokenStr == "" {

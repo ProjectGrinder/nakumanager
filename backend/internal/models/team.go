@@ -1,8 +1,7 @@
 package model
 
 type Team struct {
-	ID      int    `json:"id"`
-	Name    string `json:"name"`
-	Members []User `json:"user"`
-	Leader  User   `json:"leader"`
+	ID     string `json:"id" validate:"required,uuid"`
+	Name   string `json:"name" validate:"required"`
+	Leader User   `json:"leader"`
 }
