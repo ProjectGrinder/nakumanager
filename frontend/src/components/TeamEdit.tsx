@@ -1,9 +1,10 @@
 "use client";
 
+import { FormControl, TextField } from "@mui/material";
 import { useState } from "react";
 
 export default function TeamEdit() {
-  const team_members = [
+  const team = [
     ["Admin 1", "Project Manager"],
     ["Admin 2", "Designer"],
     ["Member 1", "Frontend"],
@@ -12,8 +13,33 @@ export default function TeamEdit() {
       "Member 3",
       "A very long role name that should be truncated if it exceeds the width of the table cell",
     ],
-  ]; //Role changing has issue
-  const [value, setValue] = useState("");
+  ];
+  const [teamList, setTeamList] = useState(team);
+  const style = {
+    "& .MuiInputLabel-root": { color: "white" },
+    "& .MuiOutlinedInput-root": {
+      color: "white",
+      backgroundColor: "#374151",
+      borderRadius: "0.5rem",
+      "& fieldset": {
+        borderColor: "#d1d5db",
+      },
+      "&:hover fieldset": {
+        borderColor: "#60a5fa",
+      },
+      "&.Mui-focused fieldset": {
+        borderColor: "#2563eb",
+      },
+    },
+    "& .MuiSvgIcon-root": {
+      color: "white",
+    },
+  };
+  const handleRoleChange = (index: number, value: string) => {
+    setTeamList((prev) =>
+      prev.map((member, i) => (i === index ? [member[0], value] : member))
+    );
+  };
   const handleCancel = () => {
     console.log("Cancel clicked");
   };
@@ -24,7 +50,7 @@ export default function TeamEdit() {
     console.log("Add member clicked");
   };
   const removeMember = (index: number) => {
-    team_members.splice(index, 1);
+    setTeamList((prev) => prev.filter((_, i) => i !== index));
     console.log(`Member at index ${index} removed`);
   };
   return (
@@ -47,21 +73,21 @@ export default function TeamEdit() {
         </div>
         <table className="table-auto text-lg w-full text-left text-white mt-6 h-80 max-h-80 overflow-y-auto">
           <tbody>
-            {team_members.map((member, index) => (
-              <tr>
-                <td
-                  className="w-[50%] max-w-40 p-4 whitespace-nowrap overflow-x-hidden text-ellipsis"
-                  key={index}
-                >
+            {teamList.map((member, index) => (
+              <tr key={index}>
+                <td className="w-[50%] max-w-40 p-3 whitespace-nowrap overflow-x-hidden text-ellipsis">
                   {member[0]}
                 </td>
-                <td className="w-[40%] p-4" key={index}>
-                  <input
-                    className="h-8 w-full text-base bg-gray-100 border-gray-500 text-gray-700 rounded outline-none p-2"
-                    type="text"
-                    value={member[1]}
-                    onChange={(e) => setValue(e.target.value)}
-                  />
+                <td className="w-[40%] p-3">
+                  <FormControl fullWidth sx={style}>
+                    <TextField
+                      id="outlined-basic"
+                      label="Label"
+                      variant="outlined"
+                      value={member[1]}
+                      onChange={(e) => handleRoleChange(index, e.target.value)}
+                    />
+                  </FormControl>
                 </td>
                 <td>
                   <i
