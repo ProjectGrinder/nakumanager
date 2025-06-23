@@ -44,3 +44,8 @@ SELECT p.*
 FROM projects p
 JOIN project_members pm ON p.id = pm.project_id
 WHERE pm.user_id = ?;
+
+-- name: IsProjectExists :one
+SELECT COUNT(*) AS count
+FROM projects
+WHERE id = ?;
