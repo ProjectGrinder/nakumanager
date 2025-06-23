@@ -16,6 +16,7 @@ type ProjectRepository interface {
 	ListProjectsByWorkspace(ctx context.Context, workspaceID string) ([]db.ListProjectsByWorkspaceRow, error)
 	RemoveMemberFromProject(ctx context.Context, data db.RemoveMemberFromProjectParams) error
 	UpdateProject(ctx context.Context, data db.UpdateProjectParams) error
+	IsProjectExists(ctx context.Context, projectID string) (bool, error)
 }
 
 type projectRepo struct {
@@ -60,4 +61,12 @@ func (r *projectRepo) RemoveMemberFromProject(ctx context.Context, data db.Remov
 
 func (r *projectRepo) UpdateProject(ctx context.Context, data db.UpdateProjectParams) error {
 	return r.queries.UpdateProject(ctx, data)
+}
+
+func (r *projectRepo) IsProjectExists(ctx context.Context, projectID string) (bool, error) {
+	exists, err := r.queries.IsProjectExists(ctx, projectID)
+	if err != nil {
+		return false, err
+	}
+	return exists > 0, nil
 }
