@@ -9,40 +9,52 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/nack098/nakumanager/internal/db"
 	models "github.com/nack098/nakumanager/internal/models"
+	"github.com/nack098/nakumanager/internal/repositories"
 	"github.com/nbutton23/zxcvbn-go"
 )
 
+type AuthHandler struct {
+	UserRepo        repositories.UserRepository
+	CreateTokenFunc func(user models.User) (string, error)
+	VerifyTokenFunc func(tokenStr string) (*jwt.Token, error)
+}
+
+func NewAuthHandler(userRepo repositories.UserRepository) *AuthHandler {
+	h := &AuthHandler{
+		UserRepo: userRepo,
+	}
+	h.CreateTokenFunc = h.CreateToken
+	h.VerifyTokenFunc = h.VerifyToken
+	return h
+}
 
 var (
-	dummyHash, _    = argon2id.CreateHash("dummy_password", argon2id.DefaultParams) //dummy hash ป้องกัน timming attack
-	LoginAttempts   = make(map[string]int)                                          //จำนวนการ login ที่ไม่ถูกต้อง
-	LoginLock       = sync.Mutex{}                                                  // mutex lock
-	RateLimitMax    = 5                                                             // จำนวนครั้งสูงสุดที่ 1 ip สามารถ login ผิดได้
-	RateLimitWindow = time.Minute * 5                                               // เวลารอหลัง login ผิดเงื่อนไข RateLimitMax
-	LastAttempt     = make(map[string]time.Time)                                    //เวลาล่าสุดที่ login ผิด
-
-	// Mock DB
-	Users = make(map[string]models.User)
-	//Mock secret key for jwt
-	secretKey = []byte("secret-key")
+	dummyHash, _    = argon2id.CreateHash("dummy_password", argon2id.DefaultParams)
+	LoginAttempts   = make(map[string]int)
+	LoginLock       = sync.Mutex{}
+	RateLimitMax    = 5
+	RateLimitWindow = time.Minute * 5
+	LastAttempt     = make(map[string]time.Time)
+	secretKey       = []byte("secret-key")
+	ResetDelay = time.Minute
 )
 
-func CreateToken(user models.User) (string, error) {
+func (h *AuthHandler) CreateToken(user models.User) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID,
 		"exp":     time.Now().Add(time.Hour * 24).Unix(),
 	})
 
-	tokenString, err := token.SignedString(secretKey)
-	if err != nil {
-		return "", err
-	}
-	return tokenString, nil
-
+	return token.SignedString(secretKey)
 }
 
-func VerifyToken(tokenStr string) (*jwt.Token, error) {
+func (h *AuthHandler) VerifyToken(tokenStr string) (*jwt.Token, error) {
+	if h.VerifyTokenFunc != nil {
+		return h.VerifyTokenFunc(tokenStr)
+	}
+
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		return secretKey, nil
 	})
@@ -54,13 +66,13 @@ func VerifyToken(tokenStr string) (*jwt.Token, error) {
 	return token, nil
 }
 
-func AuthRequired(c *fiber.Ctx) error {
+func (h *AuthHandler) AuthRequired(c *fiber.Ctx) error {
 	tokenStr := c.Cookies("token")
 	if tokenStr == "" {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Missing authentication token"})
 	}
 
-	token, err := VerifyToken(tokenStr)
+	token, err := h.VerifyToken(tokenStr)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid or expired token"})
 	}
@@ -88,12 +100,7 @@ func ResetLoginAttempts(ip string) {
 	})
 }
 
-func SetUpAuthRoutes(api fiber.Router) {
-	api.Post("/login", Login)
-	api.Post("/register", Register)
-}
-
-func Login(c *fiber.Ctx) error {
+func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	var body models.Login
 	if err := c.BodyParser(&body); err != nil {
 		return c.Status(400).SendString("Invalid request body")
@@ -112,8 +119,8 @@ func Login(c *fiber.Ctx) error {
 	}
 	LoginLock.Unlock()
 
-	user, exists := Users[body.Email]
-	if !exists {
+	user, err := h.UserRepo.GetUserByEmailWithPassword(c.Context(), body.Email)
+	if err != nil {
 		_, _ = argon2id.ComparePasswordAndHash(body.Password, dummyHash)
 		LoginLock.Lock()
 		LoginAttempts[ip]++
@@ -122,7 +129,6 @@ func Login(c *fiber.Ctx) error {
 			ResetLoginAttempts(ip)
 		}
 		LoginLock.Unlock()
-
 		return c.Status(401).SendString("Invalid email or password")
 	}
 
@@ -135,7 +141,6 @@ func Login(c *fiber.Ctx) error {
 			ResetLoginAttempts(ip)
 		}
 		LoginLock.Unlock()
-
 		return c.Status(401).SendString("Invalid email or password")
 	}
 
@@ -144,7 +149,7 @@ func Login(c *fiber.Ctx) error {
 	delete(LastAttempt, ip)
 	LoginLock.Unlock()
 
-	tokenString, err := CreateToken(user)
+	tokenString, err := h.CreateTokenFunc(models.User{ID: user.ID})
 	if err != nil {
 		return c.Status(500).SendString("Error while creating token")
 	}
@@ -164,7 +169,7 @@ func Login(c *fiber.Ctx) error {
 	})
 }
 
-func Register(c *fiber.Ctx) error {
+func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	var body models.Register
 	if err := c.BodyParser(&body); err != nil {
 		return c.Status(400).SendString(err.Error())
@@ -174,7 +179,8 @@ func Register(c *fiber.Ctx) error {
 		return c.Status(400).SendString("Invalid email format")
 	}
 
-	if _, exists := Users[body.Email]; exists {
+	_, err := h.UserRepo.GetUserByEmail(c.Context(), body.Email)
+	if err == nil {
 		return c.Status(400).SendString("User already exists")
 	}
 
@@ -197,6 +203,16 @@ func Register(c *fiber.Ctx) error {
 		PasswordHash: hashPass,
 	}
 
-	Users[body.Email] = user
+	err = h.UserRepo.CreateUser(c.Context(), db.CreateUserParams{
+		ID:           user.ID,
+		Username:     user.Username,
+		Email:        user.Email,
+		PasswordHash: user.PasswordHash,
+		Roles:        "user",
+	})
+	if err != nil {
+		return c.Status(500).SendString("Failed to create user")
+	}
+
 	return c.SendString("User registered successfully!")
 }
