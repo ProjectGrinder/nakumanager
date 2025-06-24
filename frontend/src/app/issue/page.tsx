@@ -1,4 +1,4 @@
-import IssueInfo from "@/components/IssueInfo";
+import IssueInfo from "@/components/issue/IssueInfo";
 import WorkspaceBar from "@/components/WorkspaceBar";
 
 export default function IssuePage() {

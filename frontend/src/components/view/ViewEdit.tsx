@@ -8,7 +8,7 @@ import {
   TextField,
 } from "@mui/material";
 import { useState } from "react";
-import SelectableItem from "./SelectableItem";
+import SelectableItem from "../SelectableItem";
 
 export default function ViewEdit() {
   const view = {

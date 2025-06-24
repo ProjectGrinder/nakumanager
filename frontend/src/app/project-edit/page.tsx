@@ -1,4 +1,4 @@
-import ProjectEdit from "@/components/ProjectEdit";
+import ProjectEdit from "@/components/project/ProjectEdit";
 import WorkspaceBar from "@/components/WorkspaceBar";
 
 export default function ProjectEditPage() {

@@ -1,4 +1,4 @@
-import ProjectInfo from "@/components/ProjectInfo";
+import ProjectInfo from "@/components/project/ProjectInfo";
 import WorkspaceBar from "@/components/WorkspaceBar";
 
 export default function ProjectPage() {

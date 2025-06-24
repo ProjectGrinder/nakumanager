@@ -1,5 +1,5 @@
 import WorkspaceBar from "@/components/WorkspaceBar";
-import IssueList from "@/components/IssueList";
+import IssueList from "@/components/issue/IssueList";
 
 export default function IssueListPage() {
   return (
