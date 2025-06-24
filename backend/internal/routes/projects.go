@@ -26,7 +26,7 @@ func NewProjectHandler(repo repositories.ProjectRepository, teamRepo repositorie
 	}
 }
 
-func toNullString(s *string) sql.NullString {
+func ToNullString(s *string) sql.NullString {
 	if s != nil && strings.TrimSpace(*s) != "" {
 		return sql.NullString{String: *s, Valid: true}
 	}
@@ -93,14 +93,14 @@ func (h *ProjectHandler) CreateProject(c *fiber.Ctx) error {
 	arg := db.CreateProjectParams{
 		ID:          projectID,
 		Name:        body.Name,
-		Status:      toNullString(body.Status),
-		Priority:    toNullString(body.Priority),
+		Status:      ToNullString(body.Status),
+		Priority:    ToNullString(body.Priority),
 		WorkspaceID: body.WorkspaceID,
 		TeamID:      body.TeamID,
-		LeaderID:    toNullString(body.LeaderID),
+		LeaderID:    ToNullString(body.LeaderID),
 		StartDate:   toNullTime(body.StartDate),
 		EndDate:     toNullTime(body.EndDate),
-		Label:       toNullString(body.Label),
+		Label:       ToNullString(body.Label),
 		CreatedBy:   userID,
 	}
 
@@ -149,7 +149,7 @@ func (h *ProjectHandler) AddMemberToProject(c *fiber.Ctx) error {
 	if !isMember {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "user is not a member of the team"})
 	}
-	
+
 	// เพิ่มสมาชิก
 	if err := h.Repo.AddMemberToProject(c.Context(), request); err != nil {
 		log.Println("Error adding member to project:", err)
@@ -200,7 +200,6 @@ func (h *ProjectHandler) RemoveProjectMembers(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Member removed from project successfully"})
 }
 
-
 func (h *ProjectHandler) GetProjectsByUserID(c *fiber.Ctx) error {
 	userID, ok := c.Locals("userID").(string)
 	if !ok || userID == "" {
@@ -215,7 +214,6 @@ func (h *ProjectHandler) GetProjectsByUserID(c *fiber.Ctx) error {
 
 	return c.JSON(projects)
 }
-
 
 func (h *ProjectHandler) DeleteProject(c *fiber.Ctx) error {
 	projectID := c.Params("id")
@@ -237,12 +235,11 @@ func (h *ProjectHandler) DeleteProject(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to fetch project"})
 	}
 
-	// ✅ ตรวจสอบสิทธิ์: เฉพาะ creator หรือ leader เท่านั้นที่ลบได้
 	if project.CreatedBy != userID && nullStringToString(project.LeaderID) != userID {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "only project creator or leader can delete project"})
 	}
 
-	// ✅ ลบโปรเจกต์
+
 	if err := h.Repo.DeleteProject(c.Context(), projectID); err != nil {
 		log.Println("Error deleting project:", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to delete project"})
@@ -250,4 +247,5 @@ func (h *ProjectHandler) DeleteProject(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Project deleted successfully"})
 }
+
 
