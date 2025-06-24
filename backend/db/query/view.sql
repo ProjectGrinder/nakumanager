@@ -1,19 +1,20 @@
 -- name: CreateView :exec
-INSERT INTO views (name, user_id, team_id)
-VALUES (?, ?, ?);
+INSERT INTO views (id, name, created_by, team_id)
+VALUES (?, ?, ?, ?);
 
--- name: GetViewByID :one
-SELECT id, name, user_id, team_id
+-- name: GetViewByID :many
+SELECT *
 FROM views
 WHERE id = ?;
+
 
 -- name: DeleteView :exec
 DELETE FROM views WHERE id = ?;
 
 -- name: ListViewsByUser :many
-SELECT id, name, user_id, team_id
+SELECT id, name, created_by, team_id
 FROM views
-WHERE user_id = ?
+WHERE created_by = ?
 ORDER BY name;
 
 -- name: AddGroupByToView :exec
@@ -24,7 +25,7 @@ VALUES (?, ?);
 DELETE FROM view_group_bys
 WHERE view_id = ? AND group_by = ?;
 
--- name: ListGroupBysByViewID :many
+-- name: ListGroupByViewID :many
 SELECT group_by
 FROM view_group_bys
 WHERE view_id = ?;
@@ -42,3 +43,33 @@ SELECT i.*
 FROM issues i
 JOIN view_issues vi ON i.id = vi.issue_id
 WHERE vi.view_id = ?;
+
+-- name: GetIssuesByStatus :many
+SELECT * FROM issues
+WHERE team_id = ? AND status = ?;
+
+-- name: GetIssuesByAssignee :many
+SELECT i.*
+FROM issues i
+JOIN issue_assignees ia ON ia.issue_id = i.id
+WHERE ia.user_id = ? AND i.team_id = ?;
+
+-- name: GetIssuesByPriority :many
+SELECT * FROM issues
+WHERE team_id = ? AND priority = ? ;
+
+-- name: GetIssuesByProject :many
+SELECT * FROM issues
+WHERE team_id = ? AND project_id = ?;
+
+-- name: GetIssuesByLabel :many
+SELECT * FROM issues
+WHERE team_id = ? AND Label = ?;
+
+-- name: GetIssuesByTeamID :many
+SELECT * FROM issues
+WHERE team_id = ?;
+
+-- name: GetIssuesByEndDate :many
+SELECT * FROM issues
+WHERE team_id = ? AND end_date  = ?;
