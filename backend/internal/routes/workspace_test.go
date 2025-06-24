@@ -2,7 +2,6 @@ package routes_test
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -12,69 +11,12 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/nack098/nakumanager/internal/db"
+	mocks "github.com/nack098/nakumanager/internal/routes/mock_repo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/nack098/nakumanager/internal/routes"
 )
-
-type MockWorkspaceRepo struct {
-	mock.Mock
-}
-
-func (m *MockWorkspaceRepo) CreateWorkspace(ctx context.Context, id string, name string, ownerID string) error {
-	args := m.Called(ctx, id, name, ownerID)
-	return args.Error(0)
-}
-
-func (m *MockWorkspaceRepo) GetWorkspaceByID(ctx context.Context, id string) (db.Workspace, error) {
-	args := m.Called(ctx, id)
-	return args.Get(0).(db.Workspace), args.Error(1)
-}
-
-func (m *MockWorkspaceRepo) DeleteWorkspace(ctx context.Context, id string) error {
-	args := m.Called(ctx, id)
-	return args.Error(0)
-}
-
-func (m *MockWorkspaceRepo) ListWorkspaceMembers(ctx context.Context, workspaceID string) ([]db.User, error) {
-	args := m.Called(ctx, workspaceID)
-	return args.Get(0).([]db.User), args.Error(1)
-}
-
-func (m *MockWorkspaceRepo) AddMemberToWorkspace(ctx context.Context, workspaceID, userID string) error {
-	args := m.Called(ctx, workspaceID, userID)
-	return args.Error(0)
-}
-
-func (m *MockWorkspaceRepo) RemoveMemberFromWorkspace(ctx context.Context, workspaceID, userID string) error {
-	args := m.Called(ctx, workspaceID, userID)
-	return args.Error(0)
-}
-
-func (m *MockWorkspaceRepo) RenameWorkspace(ctx context.Context, id string, newName string) error {
-	args := m.Called(ctx, id, newName)
-	return args.Error(0)
-}
-
-func (m *MockWorkspaceRepo) ListWorkspacesWithMembersByUserID(ctx context.Context, userID string) ([]db.ListWorkspacesWithMembersByUserIDRow, error) {
-	args := m.Called(ctx, userID)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).([]db.ListWorkspacesWithMembersByUserIDRow), args.Error(1)
-}
-
-func setupApp(handler *routes.WorkspaceHandler) *fiber.App {
-	app := fiber.New()
-	app.Post("/workspaces", handler.CreateWorkspace)
-	app.Get("/workspaces", handler.GetWorkspacesByUserID)
-	app.Delete("/workspaces/:workspaceid", handler.DeleteWorkspace)
-	app.Post("/workspaces/:workspaceid/members", handler.AddMemberToWorkspace)
-	app.Delete("/workspaces/:workspaceid/members", handler.RemoveMemberFromWorkspace)
-	app.Patch("/workspaces/:workspaceid", handler.RenameWorkSpace)
-	return app
-}
 
 func withUserID(userID string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -84,8 +26,8 @@ func withUserID(userID string) fiber.Handler {
 }
 
 func TestNewWorkspaceHandler(t *testing.T) {
-	mockWorkspaceRepo := new(MockWorkspaceRepo)
-	mockUserRepo := new(MockUserRepo)
+	mockWorkspaceRepo := new(mocks.MockWorkspaceRepo)
+	mockUserRepo := new(mocks.MockUserRepo)
 
 	handler := routes.NewWorkspaceHandler(mockWorkspaceRepo, mockUserRepo)
 
@@ -95,7 +37,7 @@ func TestNewWorkspaceHandler(t *testing.T) {
 }
 
 func TestCreateWorkspace_Success(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := routes.WorkspaceHandler{Repo: repo}
 
 	app := fiber.New()
@@ -117,7 +59,7 @@ func TestCreateWorkspace_Success(t *testing.T) {
 }
 
 func TestCreateWorkspace_InvalidJSON(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := routes.WorkspaceHandler{Repo: repo}
 	app := fiber.New()
 	app.Post("/workspaces", handler.CreateWorkspace)
@@ -130,7 +72,7 @@ func TestCreateWorkspace_InvalidJSON(t *testing.T) {
 }
 
 func TestCreateWorkspace_MissingUserID(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := routes.WorkspaceHandler{Repo: repo}
 
 	app := fiber.New()
@@ -148,14 +90,14 @@ func TestCreateWorkspace_MissingUserID(t *testing.T) {
 }
 
 func TestCreateWorkspace_ValidationError(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := routes.WorkspaceHandler{Repo: repo}
 
 	app := fiber.New()
 	app.Use(withUserID("user-123"))
 	app.Post("/workspaces", handler.CreateWorkspace)
 
-	payload := map[string]string{"name": ""} // invalid: empty name
+	payload := map[string]string{"name": ""} 
 	body, _ := json.Marshal(payload)
 
 	req := httptest.NewRequest(http.MethodPost, "/workspaces", bytes.NewReader(body))
@@ -167,7 +109,7 @@ func TestCreateWorkspace_ValidationError(t *testing.T) {
 }
 
 func TestCreateWorkspace_CreateWorkspaceFail(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := routes.WorkspaceHandler{Repo: repo}
 
 	app := fiber.New()
@@ -188,7 +130,7 @@ func TestCreateWorkspace_CreateWorkspaceFail(t *testing.T) {
 }
 
 func TestCreateWorkspace_AddMemberFail(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := routes.WorkspaceHandler{Repo: repo}
 
 	app := fiber.New()
@@ -210,7 +152,7 @@ func TestCreateWorkspace_AddMemberFail(t *testing.T) {
 }
 
 func TestGetWorkspacesByUserID_Success(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	expected := []db.ListWorkspacesWithMembersByUserIDRow{
@@ -231,7 +173,7 @@ func TestGetWorkspacesByUserID_Success(t *testing.T) {
 }
 
 func TestGetWorkspacesByUserID_MissingUserID(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	app := fiber.New()
@@ -244,7 +186,7 @@ func TestGetWorkspacesByUserID_MissingUserID(t *testing.T) {
 }
 
 func TestGetWorkspacesByUserID_RepoError(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	app := fiber.New()
@@ -260,21 +202,21 @@ func TestGetWorkspacesByUserID_RepoError(t *testing.T) {
 }
 
 func TestDeleteWorkspace_WorkspaceIDRequired(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	app := fiber.New()
 	app.Use(withUserID("user-123"))
 	app.Delete("/workspaces/:workspaceid?", handler.DeleteWorkspace)
 
-	req := httptest.NewRequest(http.MethodDelete, "/workspaces/", nil) // missing workspaceid
+	req := httptest.NewRequest(http.MethodDelete, "/workspaces/", nil) 
 	resp, err := app.Test(req, -1)
 	assert.NoError(t, err)
 	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 }
 
 func TestDeleteWorkspace_Unauthorized(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	app := fiber.New()
@@ -287,7 +229,7 @@ func TestDeleteWorkspace_Unauthorized(t *testing.T) {
 }
 
 func TestDeleteWorkspace_WorkspaceNotFound(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	app := fiber.New()
@@ -304,14 +246,13 @@ func TestDeleteWorkspace_WorkspaceNotFound(t *testing.T) {
 }
 
 func TestDeleteWorkspace_Forbidden(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	app := fiber.New()
 	app.Use(withUserID("user-123"))
 	app.Delete("/workspaces/:workspaceid", handler.DeleteWorkspace)
 
-	
 	ws := db.Workspace{ID: "ws-123", OwnerID: "user-999"}
 	repo.On("GetWorkspaceByID", mock.Anything, "ws-123").
 		Return(ws, nil)
@@ -323,7 +264,7 @@ func TestDeleteWorkspace_Forbidden(t *testing.T) {
 }
 
 func TestDeleteWorkspace_DeleteFailed(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	app := fiber.New()
@@ -341,7 +282,7 @@ func TestDeleteWorkspace_DeleteFailed(t *testing.T) {
 }
 
 func TestDeleteWorkspace_Success(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	app := fiber.New()
@@ -359,21 +300,21 @@ func TestDeleteWorkspace_Success(t *testing.T) {
 }
 
 func TestAddMemberToWorkspace_WorkspaceIDRequired(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	app := fiber.New()
 	app.Use(withUserID("user-123"))
 	app.Post("/workspaces/:workspaceid/members", handler.AddMemberToWorkspace)
 
-	req := httptest.NewRequest(http.MethodPost, "/workspaces/", nil) // missing workspaceid → จะเป็น 404 Fiber ก่อนถึง handler
+	req := httptest.NewRequest(http.MethodPost, "/workspaces/", nil) 
 	resp, err := app.Test(req, -1)
 	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusNotFound, resp.StatusCode) // เพราะ Fiber route ไม่ match path ไม่มี param
+	assert.Equal(t, fiber.StatusNotFound, resp.StatusCode) 
 }
 
 func TestAddMemberToWorkspace_Unauthorized(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	app := fiber.New()
@@ -386,7 +327,7 @@ func TestAddMemberToWorkspace_Unauthorized(t *testing.T) {
 }
 
 func TestAddMemberToWorkspace_WorkspaceNotFound(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	app := fiber.New()
@@ -404,7 +345,7 @@ func TestAddMemberToWorkspace_WorkspaceNotFound(t *testing.T) {
 }
 
 func TestAddMemberToWorkspace_Forbidden(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	ws := db.Workspace{ID: "ws-1", OwnerID: "user-999"}
@@ -424,7 +365,7 @@ func TestAddMemberToWorkspace_Forbidden(t *testing.T) {
 }
 
 func TestAddMemberToWorkspace_BadRequest_EmptyUserID(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	ws := db.Workspace{ID: "ws-1", OwnerID: "user-123"}
@@ -445,7 +386,7 @@ func TestAddMemberToWorkspace_BadRequest_EmptyUserID(t *testing.T) {
 }
 
 func TestAddMemberToWorkspace_AddMemberFail(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	ws := db.Workspace{ID: "ws-1", OwnerID: "user-123"}
@@ -466,7 +407,7 @@ func TestAddMemberToWorkspace_AddMemberFail(t *testing.T) {
 }
 
 func TestAddMemberToWorkspace_Success(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	ws := db.Workspace{ID: "ws-1", OwnerID: "user-123"}
@@ -487,7 +428,7 @@ func TestAddMemberToWorkspace_Success(t *testing.T) {
 }
 
 func TestAddMemberToWorkspace_WorkspaceIDEmpty(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	app := fiber.New()
@@ -503,7 +444,7 @@ func TestAddMemberToWorkspace_WorkspaceIDEmpty(t *testing.T) {
 }
 
 func TestRemoveMemberFromWorkspace_WorkspaceIDRequired(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	app := fiber.New()
@@ -519,7 +460,7 @@ func TestRemoveMemberFromWorkspace_WorkspaceIDRequired(t *testing.T) {
 }
 
 func TestRemoveMemberFromWorkspace_Unauthorized(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	app := fiber.New()
@@ -534,7 +475,7 @@ func TestRemoveMemberFromWorkspace_Unauthorized(t *testing.T) {
 }
 
 func TestRemoveMemberFromWorkspace_WorkspaceNotFound(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	app := fiber.New()
@@ -552,7 +493,7 @@ func TestRemoveMemberFromWorkspace_WorkspaceNotFound(t *testing.T) {
 }
 
 func TestRemoveMemberFromWorkspace_Forbidden(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	ws := db.Workspace{ID: "ws-1", OwnerID: "user-999"}
@@ -572,7 +513,7 @@ func TestRemoveMemberFromWorkspace_Forbidden(t *testing.T) {
 }
 
 func TestRemoveMemberFromWorkspace_BadRequest_EmptyUserID(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	ws := db.Workspace{ID: "ws-1", OwnerID: "user-123"}
@@ -592,7 +533,7 @@ func TestRemoveMemberFromWorkspace_BadRequest_EmptyUserID(t *testing.T) {
 }
 
 func TestRemoveMemberFromWorkspace_RemoveMemberFail(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	ws := db.Workspace{ID: "ws-1", OwnerID: "user-123"}
@@ -613,7 +554,7 @@ func TestRemoveMemberFromWorkspace_RemoveMemberFail(t *testing.T) {
 }
 
 func TestRemoveMemberFromWorkspace_Success(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	ws := db.Workspace{ID: "ws-1", OwnerID: "user-123"}
@@ -634,7 +575,7 @@ func TestRemoveMemberFromWorkspace_Success(t *testing.T) {
 }
 
 func TestRenameWorkSpace_WorkspaceIDRequired(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	app := fiber.New()
@@ -650,7 +591,7 @@ func TestRenameWorkSpace_WorkspaceIDRequired(t *testing.T) {
 }
 
 func TestRenameWorkSpace_Unauthorized(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	app := fiber.New()
@@ -665,7 +606,7 @@ func TestRenameWorkSpace_Unauthorized(t *testing.T) {
 }
 
 func TestRenameWorkSpace_WorkspaceNotFound(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	app := fiber.New()
@@ -683,7 +624,7 @@ func TestRenameWorkSpace_WorkspaceNotFound(t *testing.T) {
 }
 
 func TestRenameWorkSpace_Forbidden(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	ws := db.Workspace{ID: "ws-1", OwnerID: "user-999"}
@@ -703,7 +644,7 @@ func TestRenameWorkSpace_Forbidden(t *testing.T) {
 }
 
 func TestRenameWorkSpace_BadRequest_NameRequired(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	ws := db.Workspace{ID: "ws-1", OwnerID: "user-123"}
@@ -714,7 +655,6 @@ func TestRenameWorkSpace_BadRequest_NameRequired(t *testing.T) {
 
 	repo.On("GetWorkspaceByID", mock.Anything, "ws-1").Return(ws, nil)
 
-	// empty name
 	req := httptest.NewRequest(http.MethodPut, "/workspaces/ws-1/rename", strings.NewReader(`{"name":""}`))
 	req.Header.Set("Content-Type", "application/json")
 
@@ -724,7 +664,7 @@ func TestRenameWorkSpace_BadRequest_NameRequired(t *testing.T) {
 }
 
 func TestRenameWorkSpace_RenameFail(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	ws := db.Workspace{ID: "ws-1", OwnerID: "user-123"}
@@ -745,7 +685,7 @@ func TestRenameWorkSpace_RenameFail(t *testing.T) {
 }
 
 func TestRenameWorkSpace_Success(t *testing.T) {
-	repo := new(MockWorkspaceRepo)
+	repo := new(mocks.MockWorkspaceRepo)
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	ws := db.Workspace{ID: "ws-1", OwnerID: "user-123"}
