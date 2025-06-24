@@ -7,6 +7,6 @@ import (
 
 func SetUpViewRoutes(api fiber.Router, h *routes.ViewHandler) {
 	api.Post("/views", h.CreateView)
-	api.Get("/views/:id", h.GetViewsByUserID)
+	api.Get("/views", h.GetViewsByGroupBy)
 	api.Delete("/views/:id", h.DeleteView)
 }
