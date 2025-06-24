@@ -1,5 +1,4 @@
 "use client";
-import { database1, database2, database3 } from "../Database";
 import { useState } from "react";
 export default function Register() {
   //Implement the register functionality here
@@ -9,60 +8,83 @@ export default function Register() {
   const [message, setMessage] = useState("");
 
   const handleRegister = () => {
-    //Handle registration logic
-    //if contion : setMessage = OK + add to the TAB the new user
-    //else : setMessage = NOT OK 
-      database1.push(creatUser);
-      database2.push(creatPassWord);
-      database3.push(email);
-      setMessage("✅ Inscription réussie !");
-      // Facultatif : réinitialiser les champs
-      setCreatUser("");
-      setCreatPassWord("");
-      setEmail("");
+  // Récupère les anciens utilisateurs du localStorage (ou [] s'il n'y en a pas)
+  const users = JSON.parse(localStorage.getItem("users") || "[]");
+
+  // Crée un nouvel utilisateur
+  const newUser = {
+    username: creatUser,
+    password: creatPassWord,
+    email: email,
   };
 
+  // Ajoute et sauvegarde dans localStorage
+  users.push(newUser);
+  localStorage.setItem("users", JSON.stringify(users));
+  console.log("Utilisateurs enregistrés :", users);
+
+  setMessage("✅ successful register!");
+  setCreatUser("");
+  setCreatPassWord("");
+  setEmail("");
+};
+
+
   return (
-    <main className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Login</h1>
+  <main className="min-h-screen flex items-center justify-center bg-[#2f2f2f]">
+  <div className="bg-[#5a5a5a] p-10 rounded-xl shadow-lg w-[350px] text-white">
+    <h1 className="text-3xl font-bold text-center mb-6">Register</h1>
+    
+    <label htmlFor="username" className="block font-semibold mb-1">Username</label>
+    <input
+      id="username"
+      type="text"
+      value={creatUser} // ou creatUser
+      onChange={(e) => setCreatUser(e.target.value)}
+      className="w-full p-2 rounded mb-4 text-black bg-white"
+      placeholder="Enter username"
+    />
 
-      <input
-        id="username"
-        type="text"
-        value={creatUser}
-        onChange={(e) => setCreatUser(e.target.value)}
-        className="border border-gray-400 p-2 rounded"
-        placeholder="enter username"
-      />
+    {/* Email field only on Register page */}
+    <label htmlFor="email" className="block font-semibold mb-1">Email</label>
+    <input
+      id="email"
+      type="text"
+      value={email}
+      onChange={(e) => setEmail(e.target.value)}
+      className="w-full p-2 rounded mb-4 text-black bg-white"
+      placeholder="Enter email"
+    />
 
-      <input
-        id="password"
-        type="text"
-        value={creatPassWord}
-        onChange={(e) => setCreatPassWord(e.target.value)}
-        className="border border-gray-400 p-2 rounded ml-2"
-        placeholder="enter password"
-      />
+    <label htmlFor="password" className="block font-semibold mb-1">Password</label>
+    <input
+      id="password"
+      type="password"
+      value={creatPassWord} // ou creatPassWord
+      onChange={(e) => setCreatPassWord(e.target.value)}
+      className="w-full p-2 rounded mb-6 text-black bg-white"
+      placeholder="Enter password"
+    />
 
-      <input
-        id = "email" 
-        type="text" 
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        className="border border-gray-400 p-2 rounded ml-2"
-        placeholder="enter email"
+    <button
+      onClick={handleRegister} // ou handleRegister
+      className="w-full bg-white text-black font-semibold py-2 rounded hover:bg-gray-200 transition"
+    >
+      Register 
+    </button>
 
-      />
 
-      <button
-        id="btn-check"
-        onClick={handleRegister}
-        className="ml-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-      >
-        Register
-      </button>
+ 
+    <div className="text-center mt-4 text-sm">
+      Back to{" "}
+      <a href="/login" className="underline">
+        Log In
+      </a>
+    </div>
 
-      {message && <p className="mt-4">{message}</p>}
-    </main>
+    {message && <p className="mt-4 text-center">{message}</p>}
+  </div>
+</main>
+
   );
 }
