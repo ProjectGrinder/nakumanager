@@ -535,30 +535,50 @@ func (q *Queries) ListViewsByUser(ctx context.Context, createdBy string) ([]View
 
 const removeGroupByFromView = `-- name: RemoveGroupByFromView :exec
 DELETE FROM view_group_bys
-WHERE view_id = ? AND group_by = ?
+WHERE view_id = ?
 `
 
-type RemoveGroupByFromViewParams struct {
-	ViewID  string `json:"view_id"`
-	GroupBy string `json:"group_by"`
-}
-
-func (q *Queries) RemoveGroupByFromView(ctx context.Context, arg RemoveGroupByFromViewParams) error {
-	_, err := q.db.ExecContext(ctx, removeGroupByFromView, arg.ViewID, arg.GroupBy)
+func (q *Queries) RemoveGroupByFromView(ctx context.Context, viewID string) error {
+	_, err := q.db.ExecContext(ctx, removeGroupByFromView, viewID)
 	return err
 }
 
 const removeIssueFromView = `-- name: RemoveIssueFromView :exec
 DELETE FROM view_issues
-WHERE view_id = ? AND issue_id = ?
+WHERE view_id = ?
 `
 
-type RemoveIssueFromViewParams struct {
-	ViewID  string `json:"view_id"`
-	IssueID string `json:"issue_id"`
+func (q *Queries) RemoveIssueFromView(ctx context.Context, viewID string) error {
+	_, err := q.db.ExecContext(ctx, removeIssueFromView, viewID)
+	return err
 }
 
-func (q *Queries) RemoveIssueFromView(ctx context.Context, arg RemoveIssueFromViewParams) error {
-	_, err := q.db.ExecContext(ctx, removeIssueFromView, arg.ViewID, arg.IssueID)
+const updateViewGroupBy = `-- name: UpdateViewGroupBy :exec
+UPDATE view_group_bys SET group_by = ? 
+WHERE view_id = ?
+`
+
+type UpdateViewGroupByParams struct {
+	GroupBy string `json:"group_by"`
+	ViewID  string `json:"view_id"`
+}
+
+func (q *Queries) UpdateViewGroupBy(ctx context.Context, arg UpdateViewGroupByParams) error {
+	_, err := q.db.ExecContext(ctx, updateViewGroupBy, arg.GroupBy, arg.ViewID)
+	return err
+}
+
+const updateViewName = `-- name: UpdateViewName :exec
+UPDATE views SET name = ? 
+WHERE id = ?
+`
+
+type UpdateViewNameParams struct {
+	Name string `json:"name"`
+	ID   string `json:"id"`
+}
+
+func (q *Queries) UpdateViewName(ctx context.Context, arg UpdateViewNameParams) error {
+	_, err := q.db.ExecContext(ctx, updateViewName, arg.Name, arg.ID)
 	return err
 }

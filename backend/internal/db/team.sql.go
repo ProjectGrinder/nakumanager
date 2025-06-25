@@ -301,19 +301,34 @@ func (q *Queries) RemoveMemberFromTeam(ctx context.Context, arg RemoveMemberFrom
 	return err
 }
 
-const updateTeam = `-- name: UpdateTeam :exec
+const renameTeam = `-- name: RenameTeam :exec
 UPDATE teams
-SET name = ?, leader_id = ?
+SET name = ?
 WHERE id = ?
 `
 
-type UpdateTeamParams struct {
-	Name     string         `json:"name"`
+type RenameTeamParams struct {
+	Name string `json:"name"`
+	ID   string `json:"id"`
+}
+
+func (q *Queries) RenameTeam(ctx context.Context, arg RenameTeamParams) error {
+	_, err := q.db.ExecContext(ctx, renameTeam, arg.Name, arg.ID)
+	return err
+}
+
+const setLeaderToTeam = `-- name: SetLeaderToTeam :exec
+UPDATE teams
+SET leader_id = ?
+WHERE id = ?
+`
+
+type SetLeaderToTeamParams struct {
 	LeaderID sql.NullString `json:"leader_id"`
 	ID       string         `json:"id"`
 }
 
-func (q *Queries) UpdateTeam(ctx context.Context, arg UpdateTeamParams) error {
-	_, err := q.db.ExecContext(ctx, updateTeam, arg.Name, arg.LeaderID, arg.ID)
+func (q *Queries) SetLeaderToTeam(ctx context.Context, arg SetLeaderToTeamParams) error {
+	_, err := q.db.ExecContext(ctx, setLeaderToTeam, arg.LeaderID, arg.ID)
 	return err
 }

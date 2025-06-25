@@ -280,3 +280,50 @@ func (q *Queries) RemoveAssigneeFromIssue(ctx context.Context, arg RemoveAssigne
 	_, err := q.db.ExecContext(ctx, removeAssigneeFromIssue, arg.IssueID, arg.UserID)
 	return err
 }
+
+const updateIssue = `-- name: UpdateIssue :exec
+UPDATE issues
+SET
+    title = ?,
+    content = ?,
+    priority = ?,
+    status = ?,
+    project_id = ?,
+    team_id = ?,
+    start_date = ?,
+    end_date = ?,
+    label = ?,
+    owner_id = ?
+WHERE id = ?
+`
+
+type UpdateIssueParams struct {
+	Title     string         `json:"title"`
+	Content   sql.NullString `json:"content"`
+	Priority  sql.NullString `json:"priority"`
+	Status    string         `json:"status"`
+	ProjectID sql.NullString `json:"project_id"`
+	TeamID    string         `json:"team_id"`
+	StartDate sql.NullTime   `json:"start_date"`
+	EndDate   sql.NullTime   `json:"end_date"`
+	Label     sql.NullString `json:"label"`
+	OwnerID   string         `json:"owner_id"`
+	ID        string         `json:"id"`
+}
+
+func (q *Queries) UpdateIssue(ctx context.Context, arg UpdateIssueParams) error {
+	_, err := q.db.ExecContext(ctx, updateIssue,
+		arg.Title,
+		arg.Content,
+		arg.Priority,
+		arg.Status,
+		arg.ProjectID,
+		arg.TeamID,
+		arg.StartDate,
+		arg.EndDate,
+		arg.Label,
+		arg.OwnerID,
+		arg.ID,
+	)
+	return err
+}

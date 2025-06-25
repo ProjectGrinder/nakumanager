@@ -68,17 +68,24 @@ type Querier interface {
 	ListWorkspaceMembers(ctx context.Context, workspaceID string) ([]User, error)
 	ListWorkspacesWithMembersByUserID(ctx context.Context, arg ListWorkspacesWithMembersByUserIDParams) ([]ListWorkspacesWithMembersByUserIDRow, error)
 	RemoveAssigneeFromIssue(ctx context.Context, arg RemoveAssigneeFromIssueParams) error
-	RemoveGroupByFromView(ctx context.Context, arg RemoveGroupByFromViewParams) error
-	RemoveIssueFromView(ctx context.Context, arg RemoveIssueFromViewParams) error
+	RemoveGroupByFromView(ctx context.Context, viewID string) error
+	RemoveIssueFromView(ctx context.Context, viewID string) error
 	RemoveMemberFromProject(ctx context.Context, arg RemoveMemberFromProjectParams) error
 	RemoveMemberFromTeam(ctx context.Context, arg RemoveMemberFromTeamParams) error
 	RemoveMemberFromWorkspace(ctx context.Context, arg RemoveMemberFromWorkspaceParams) error
+	RenameTeam(ctx context.Context, arg RenameTeamParams) error
 	RenameWorkspace(ctx context.Context, arg RenameWorkspaceParams) error
+	SetLeaderToTeam(ctx context.Context, arg SetLeaderToTeamParams) error
 	UpdateEmail(ctx context.Context, arg UpdateEmailParams) error
+	UpdateIssue(ctx context.Context, arg UpdateIssueParams) error
+	UpdateLeaderID(ctx context.Context, arg UpdateLeaderIDParams) error
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) error
+	UpdateProjectName(ctx context.Context, arg UpdateProjectNameParams) error
 	UpdateRoles(ctx context.Context, arg UpdateRolesParams) error
-	UpdateTeam(ctx context.Context, arg UpdateTeamParams) error
 	UpdateUsername(ctx context.Context, arg UpdateUsernameParams) error
+	UpdateViewGroupBy(ctx context.Context, arg UpdateViewGroupByParams) error
+	UpdateViewName(ctx context.Context, arg UpdateViewNameParams) error
+	UpdateWorkspaceID(ctx context.Context, arg UpdateWorkspaceIDParams) error
 }
 
 var _ Querier = (*Queries)(nil)
