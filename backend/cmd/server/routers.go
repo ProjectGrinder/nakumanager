@@ -4,23 +4,24 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/nack098/nakumanager/internal/auth"
 	"github.com/nack098/nakumanager/internal/db"
 	"github.com/nack098/nakumanager/internal/gateway"
 	"github.com/nack098/nakumanager/internal/repositories"
 	"github.com/nack098/nakumanager/internal/routes"
+	"github.com/nack098/nakumanager/internal/ws"
 )
 
 func LoggerMiddleware(c *fiber.Ctx) error {
-	// ก่อนที่จะเรียก handler ตัวจริง
 	method := c.Method()
 	path := c.Path()
 	ip := c.IP()
 
 	fmt.Printf("[LOG] %s %s - from IP: %s\n", method, path, ip)
 
-	// เรียก handler ตัวจริงต่อ
 	return c.Next()
 }
 
@@ -32,6 +33,7 @@ func SetUpRouters(app *fiber.App, conn *sql.DB) {
 	projectRepo := repositories.NewProjectRepository(queries)
 	issueRepo := repositories.NewIssueRepository(queries)
 	viewRepo := repositories.NewViewRepository(conn)
+	wsHandler := ws.NewWSHandler(workspaceRepo, teamRepo, projectRepo, issueRepo, userRepo, viewRepo)
 
 	authHandler := auth.NewAuthHandler(userRepo)
 	workspaceHandler := routes.NewWorkspaceHandler(workspaceRepo, userRepo)
@@ -39,6 +41,12 @@ func SetUpRouters(app *fiber.App, conn *sql.DB) {
 	projectHandler := routes.NewProjectHandler(projectRepo, teamRepo)
 	issueHandler := routes.NewIssueHandler(issueRepo, teamRepo, projectRepo)
 	viewHandler := routes.NewViewHandler(viewRepo)
+
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "http://localhost:8080",
+		AllowMethods: "GET,POST,PUT,DELETE",
+		AllowHeaders: "Content-Type, Authorization",
+	}))
 
 	api := app.Group("/api")
 
@@ -55,7 +63,7 @@ func SetUpRouters(app *fiber.App, conn *sql.DB) {
 	gateway.SetUpIssueRoutes(private, issueHandler)
 	gateway.SetUpViewRoutes(private, viewHandler)
 
-	// wsGroup := app.Group("/ws", ws.WebSocketMiddleware)
-	// wsGroup.Get("/", websocket.New(ws.CentralWebSocketHandler))
+	wsGroup := app.Group("/ws", ws.WebSocketMiddleware(authHandler))
+	wsGroup.Get("/", websocket.New(wsHandler.CentralWebSocketHandler))
 
 }
