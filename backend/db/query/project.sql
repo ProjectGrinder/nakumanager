@@ -35,9 +35,23 @@ WHERE pm.project_id = ?;
 
 -- name: UpdateProject :exec
 UPDATE projects
-SET name = ?, status = ?, priority = ?, workspace_id = ?, leader_id = ?, start_date = ?, end_date = ?, label = ?
+SET status = ?, priority = ?, start_date = ?, end_date = ?, label = ?
 WHERE id = ?;
 
+-- name: UpdateProjectName :exec
+UPDATE projects
+SET name = ?
+WHERE id = ?;
+
+-- name: UpdateWorkspaceID :exec
+UPDATE projects
+SET workspace_id = ?
+WHERE id = ?;
+
+-- name: UpdateLeaderID :exec
+UPDATE projects
+SET leader_id = ?
+WHERE id = ?;
 
 -- name: GetProjectsByUserID :many
 SELECT p.*

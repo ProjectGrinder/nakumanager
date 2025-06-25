@@ -23,7 +23,7 @@ VALUES (?, ?);
 
 -- name: RemoveGroupByFromView :exec
 DELETE FROM view_group_bys
-WHERE view_id = ? AND group_by = ?;
+WHERE view_id = ?;
 
 -- name: ListGroupByViewID :many
 SELECT group_by
@@ -36,7 +36,7 @@ VALUES (?, ?);
 
 -- name: RemoveIssueFromView :exec
 DELETE FROM view_issues
-WHERE view_id = ? AND issue_id = ?;
+WHERE view_id = ?;
 
 -- name: ListIssuesByViewID :many
 SELECT i.*
@@ -73,3 +73,11 @@ WHERE team_id = ?;
 -- name: GetIssuesByEndDate :many
 SELECT * FROM issues
 WHERE team_id = ? AND end_date  = ?;
+
+-- name: UpdateViewName :exec
+UPDATE views SET name = ? 
+WHERE id = ?;
+
+-- name: UpdateViewGroupBy :exec
+UPDATE view_group_bys SET group_by = ? 
+WHERE view_id = ?;
