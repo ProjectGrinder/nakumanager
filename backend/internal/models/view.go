@@ -11,3 +11,10 @@ type ViewCreateRequest struct {
 type ViewGroupBy struct {
 	ViewID string `json:"view_id"`
 }
+
+type EditView struct {
+	ID       string   `json:"view_id" validate:"required"`
+	TeamID   string   `json:"team_id"`
+	Name     string   `json:"name"`
+	GroupBys []string `json:"group_bys"`
+}
