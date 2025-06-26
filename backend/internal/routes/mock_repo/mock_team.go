@@ -3,7 +3,7 @@ package mock
 import (
 	"context"
 
-	"github.com/nack098/nakumanager/internal/db"
+	db "github.com/nack098/nakumanager/internal/db"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -74,4 +74,14 @@ func (m *MockTeamRepo) IsMemberInTeam(ctx context.Context, teamID, userID string
 func (m *MockTeamRepo) IsTeamExists(ctx context.Context, teamID string) (bool, error) {
 	args := m.Called(ctx, teamID)
 	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockTeamRepo) RenameTeam(ctx context.Context, teamID, name string) error {
+	args := m.Called(ctx, teamID, name)
+	return args.Error(0)
+}
+
+func (m *MockTeamRepo) SetLeaderToTeam(ctx context.Context, teamID, userID string) error {
+	args := m.Called(ctx, teamID, userID)
+	return args.Error(0)
 }
