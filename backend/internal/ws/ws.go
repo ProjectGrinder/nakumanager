@@ -3,37 +3,129 @@ package ws
 import (
 	"encoding/json"
 	"log"
+	"sync"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
-	"github.com/nack098/nakumanager/internal/auth"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/nack098/nakumanager/internal/repositories"
 )
 
-func WebSocketMiddleware(c *fiber.Ctx) error {
-	if !websocket.IsWebSocketUpgrade(c) {
-		return fiber.ErrUpgradeRequired
-	}
 
-	token := c.Cookies("token")
-	if token == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Missing authentication token",
-		})
-	}
-
-	//TODO: fix return token
-	if _ ,err := auth.VerifyToken(token); err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Invalid or expired token",
-		})
-	}
-
-	c.Locals("token", token)
-	return c.Next()
+type ConnWithLocals interface {
+	Locals(key string, defaultValue ...interface{}) interface{}
+	WriteMessage(messageType int, data []byte) error
+	ReadMessage() (messageType int, p []byte, err error)
+	Close() error
 }
 
-func CentralWebSocketHandler(c *websocket.Conn) {
-	defer c.Close()
+
+type WSHandler struct {
+	mu            sync.Mutex
+	clients       map[*websocket.Conn]string
+	WorkspaceRepo repositories.WorkspaceRepository
+	TeamRepo      repositories.TeamRepository
+	ProjectRepo   repositories.ProjectRepository
+	IssueRepo     repositories.IssueRepository
+	UserRepo      repositories.UserRepository
+	ViewRepo      repositories.ViewRepository
+	BroadcastFunc func(interface{})
+}
+
+func NewWSHandler(workspaceRepo repositories.WorkspaceRepository, teamRepo repositories.TeamRepository, projectRepo repositories.ProjectRepository, issueRepo repositories.IssueRepository, userRepo repositories.UserRepository, viewRepo repositories.ViewRepository) *WSHandler {
+	return &WSHandler{
+		clients:       make(map[*websocket.Conn]string),
+		WorkspaceRepo: workspaceRepo,
+		TeamRepo:      teamRepo,
+		ProjectRepo:   projectRepo,
+		IssueRepo:     issueRepo,
+		UserRepo:      userRepo,
+		ViewRepo:      viewRepo,
+	}
+}
+
+func (h *WSHandler) RegisterClient(conn *websocket.Conn, client string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.clients[conn] = client
+	log.Printf("New WebSocket client connected. Total: %d", len(h.clients))
+}
+
+func (h *WSHandler) UnregisterClient(conn *websocket.Conn) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	delete(h.clients, conn)
+	log.Printf("Client disconnected. Remaining: %d", len(h.clients))
+}
+
+func (h *WSHandler) Broadcast(message interface{}) {
+	if h.BroadcastFunc != nil {
+		h.BroadcastFunc(message)
+		return
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	data, err := json.Marshal(message)
+	if err != nil {
+		log.Println("broadcast marshal error:", err)
+		return
+	}
+	for conn := range h.clients {
+		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
+			log.Println("write message error:", err)
+		}
+	}
+}
+
+
+func WebSocketMiddleware(authHandler interface {
+	VerifyToken(string) (*jwt.Token, error)
+}) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		if !websocket.IsWebSocketUpgrade(c) {
+			return fiber.ErrUpgradeRequired
+		}
+
+		token := c.Cookies("token")
+		if token == "" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Missing authentication token",
+			})
+		}
+
+		_, err := authHandler.VerifyToken(token)
+		if err != nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Invalid or expired token",
+			})
+		}
+
+		claims, _ := jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
+			return []byte("secret-key"), nil
+		})
+		if m, ok := claims.Claims.(jwt.MapClaims); ok {
+			if userID, ok := m["user_id"].(string); ok {
+				c.Locals("userID", userID)
+			}
+		}
+
+		return c.Next()
+	}
+}
+
+func (h *WSHandler) CentralWebSocketHandler(c *websocket.Conn) {
+	defer func() {
+		h.UnregisterClient(c)
+		c.Close()
+	}()
+
+	userID, ok := c.Locals("userID").(string)
+	if !ok || userID == "" {
+		log.Println("Missing userID in connection")
+		return
+	}
+
+	h.RegisterClient(c, userID)
 
 	for {
 		_, msg, err := c.ReadMessage()
@@ -52,20 +144,20 @@ func CentralWebSocketHandler(c *websocket.Conn) {
 			continue
 		}
 
+		log.Println("Received event:", message.Event)
 		switch message.Event {
 		case "update_workspace":
-			UpdateWorkspaceHandler(c, message.Data)
+			h.UpdateWorkspaceHandler(c, message.Data)
 		case "update_project":
-			UpdateProjectHandler(c, message.Data)
+			h.UpdateProjectHandler(c, message.Data)
 		case "update_issue":
-			UpdateIssueHandler(c, message.Data)
+			h.UpdateIssueHandler(c, message.Data)
 		case "update_view":
-			UpdateViewHandler(c, message.Data)
+			h.UpdateViewHandler(c, message.Data)
 		case "update_team":
-			UpdateTeamHandler(c, message.Data)
+			h.UpdateTeamHandler(c, message.Data)
 		default:
 			log.Println("unknown event:", message.Event)
 		}
-
 	}
 }
