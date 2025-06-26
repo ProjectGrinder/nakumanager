@@ -19,8 +19,9 @@ type ViewRepository interface {
 	ListGroupByViewID(ctx context.Context, viewID string) ([]string, error)
 	ListIssuesByViewID(ctx context.Context, viewID string) ([]db.Issue, error)
 	ListViewsByUser(ctx context.Context, userID string) ([]db.View, error)
-	RemoveGroupByFromView(ctx context.Context, data db.RemoveGroupByFromViewParams) error
-	RemoveIssueFromView(ctx context.Context, data db.RemoveIssueFromViewParams) error
+	UpdateViewName(ctx context.Context,id string, name string) error
+	RemoveGroupByFromView(ctx context.Context, id string) error
+	RemoveIssueFromView(ctx context.Context, id string) error
 	ListIssuesByGroupFilters(ctx context.Context, teamID string, filters map[string]string) ([]db.Issue, error)
 	GetGroupedIssues(
 		ctx context.Context,
@@ -73,12 +74,19 @@ func (r *viewRepo) ListViewsByUser(ctx context.Context, userID string) ([]db.Vie
 	return r.db.ListViewsByUser(ctx, userID)
 }
 
-func (r *viewRepo) RemoveGroupByFromView(ctx context.Context, data db.RemoveGroupByFromViewParams) error {
-	return r.db.RemoveGroupByFromView(ctx, data)
+func (r *viewRepo) UpdateViewName(ctx context.Context,id string, name string) error {
+	return r.db.UpdateViewName(ctx, db.UpdateViewNameParams{
+		ID:   id,
+		Name: name,
+	})
 }
 
-func (r *viewRepo) RemoveIssueFromView(ctx context.Context, data db.RemoveIssueFromViewParams) error {
-	return r.db.RemoveIssueFromView(ctx, data)
+func (r *viewRepo) RemoveGroupByFromView(ctx context.Context, id string) error {
+	return r.db.RemoveGroupByFromView(ctx, id)
+}
+
+func (r *viewRepo) RemoveIssueFromView(ctx context.Context, id string) error {
+	return r.db.RemoveIssueFromView(ctx, id)
 }
 
 type GroupedIssue struct {
