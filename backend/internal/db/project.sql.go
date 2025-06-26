@@ -254,6 +254,7 @@ func (q *Queries) RemoveMemberFromProject(ctx context.Context, arg RemoveMemberF
 	return err
 }
 
+
 const updateLeaderID = `-- name: UpdateLeaderID :exec
 UPDATE projects
 SET leader_id = ?
@@ -283,12 +284,12 @@ type UpdateProjectParams struct {
 	EndDate   sql.NullTime   `json:"end_date"`
 	Label     sql.NullString `json:"label"`
 	ID        string         `json:"id"`
-}
 
 func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) error {
 	_, err := q.db.ExecContext(ctx, updateProject,
 		arg.Status,
 		arg.Priority,
+
 		arg.StartDate,
 		arg.EndDate,
 		arg.Label,
@@ -296,6 +297,7 @@ func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) er
 	)
 	return err
 }
+
 
 const updateProjectName = `-- name: UpdateProjectName :exec
 UPDATE projects
@@ -328,3 +330,4 @@ func (q *Queries) UpdateWorkspaceID(ctx context.Context, arg UpdateWorkspaceIDPa
 	_, err := q.db.ExecContext(ctx, updateWorkspaceID, arg.WorkspaceID, arg.ID)
 	return err
 }
+

@@ -7,8 +7,9 @@ package db
 
 import (
 	"context"
+
 	"database/sql"
-)
+
 
 const addGroupByToView = `-- name: AddGroupByToView :exec
 INSERT INTO view_group_bys (view_id, group_by)
@@ -398,6 +399,7 @@ FROM views
 WHERE id = ?
 `
 
+
 func (q *Queries) GetViewByID(ctx context.Context, id string) ([]View, error) {
 	rows, err := q.db.QueryContext(ctx, getViewByID, id)
 	if err != nil {
@@ -431,6 +433,7 @@ SELECT group_by
 FROM view_group_bys
 WHERE view_id = ?
 `
+
 
 func (q *Queries) ListGroupByViewID(ctx context.Context, viewID string) ([]string, error) {
 	rows, err := q.db.QueryContext(ctx, listGroupByViewID, viewID)

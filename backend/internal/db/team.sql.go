@@ -301,6 +301,7 @@ func (q *Queries) RemoveMemberFromTeam(ctx context.Context, arg RemoveMemberFrom
 	return err
 }
 
+
 const renameTeam = `-- name: RenameTeam :exec
 UPDATE teams
 SET name = ?
@@ -327,6 +328,7 @@ type SetLeaderToTeamParams struct {
 	LeaderID sql.NullString `json:"leader_id"`
 	ID       string         `json:"id"`
 }
+
 
 func (q *Queries) SetLeaderToTeam(ctx context.Context, arg SetLeaderToTeamParams) error {
 	_, err := q.db.ExecContext(ctx, setLeaderToTeam, arg.LeaderID, arg.ID)

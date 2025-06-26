@@ -281,6 +281,7 @@ func (q *Queries) RemoveAssigneeFromIssue(ctx context.Context, arg RemoveAssigne
 	return err
 }
 
+
 const updateIssue = `-- name: UpdateIssue :exec
 UPDATE issues
 SET
@@ -327,3 +328,4 @@ func (q *Queries) UpdateIssue(ctx context.Context, arg UpdateIssueParams) error 
 	)
 	return err
 }
+

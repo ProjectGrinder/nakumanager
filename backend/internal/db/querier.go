@@ -86,6 +86,6 @@ type Querier interface {
 	UpdateViewGroupBy(ctx context.Context, arg UpdateViewGroupByParams) error
 	UpdateViewName(ctx context.Context, arg UpdateViewNameParams) error
 	UpdateWorkspaceID(ctx context.Context, arg UpdateWorkspaceIDParams) error
-}
+
 
 var _ Querier = (*Queries)(nil)
