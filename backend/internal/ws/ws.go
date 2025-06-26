@@ -2,6 +2,7 @@ package ws
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"sync"
 
@@ -11,7 +12,6 @@ import (
 	"github.com/nack098/nakumanager/internal/repositories"
 )
 
-
 type ConnWithLocals interface {
 	Locals(key string, defaultValue ...interface{}) interface{}
 	WriteMessage(messageType int, data []byte) error
@@ -19,10 +19,9 @@ type ConnWithLocals interface {
 	Close() error
 }
 
-
 type WSHandler struct {
 	mu            sync.Mutex
-	clients       map[*websocket.Conn]string
+	Clients       map[*websocket.Conn]string
 	WorkspaceRepo repositories.WorkspaceRepository
 	TeamRepo      repositories.TeamRepository
 	ProjectRepo   repositories.ProjectRepository
@@ -34,7 +33,7 @@ type WSHandler struct {
 
 func NewWSHandler(workspaceRepo repositories.WorkspaceRepository, teamRepo repositories.TeamRepository, projectRepo repositories.ProjectRepository, issueRepo repositories.IssueRepository, userRepo repositories.UserRepository, viewRepo repositories.ViewRepository) *WSHandler {
 	return &WSHandler{
-		clients:       make(map[*websocket.Conn]string),
+		Clients:       make(map[*websocket.Conn]string),
 		WorkspaceRepo: workspaceRepo,
 		TeamRepo:      teamRepo,
 		ProjectRepo:   projectRepo,
@@ -44,18 +43,25 @@ func NewWSHandler(workspaceRepo repositories.WorkspaceRepository, teamRepo repos
 	}
 }
 
-func (h *WSHandler) RegisterClient(conn *websocket.Conn, client string) {
+func (h *WSHandler) RegisterClient(conn *websocket.Conn, client string) error {
+	if conn == nil || client == "" {
+		return errors.New("invalid client registration: nil connection or empty client ID")
+	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	h.clients[conn] = client
-	log.Printf("New WebSocket client connected. Total: %d", len(h.clients))
+	if _, ok := h.Clients[conn]; ok {
+		return errors.New("client already registered")
+	}
+	h.Clients[conn] = client
+	log.Printf("New WebSocket client connected. Total: %d", len(h.Clients))
+	return nil
 }
 
 func (h *WSHandler) UnregisterClient(conn *websocket.Conn) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	delete(h.clients, conn)
-	log.Printf("Client disconnected. Remaining: %d", len(h.clients))
+	delete(h.Clients, conn)
+	log.Printf("Client disconnected. Remaining: %d", len(h.Clients))
 }
 
 func (h *WSHandler) Broadcast(message interface{}) {
@@ -70,13 +76,12 @@ func (h *WSHandler) Broadcast(message interface{}) {
 		log.Println("broadcast marshal error:", err)
 		return
 	}
-	for conn := range h.clients {
+	for conn := range h.Clients {
 		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
 			log.Println("write message error:", err)
 		}
 	}
 }
-
 
 func WebSocketMiddleware(authHandler interface {
 	VerifyToken(string) (*jwt.Token, error)

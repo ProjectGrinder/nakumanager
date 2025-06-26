@@ -7,7 +7,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/gofiber/contrib/websocket"
 	"github.com/nack098/nakumanager/internal/db"
 	models "github.com/nack098/nakumanager/internal/models"
 )
@@ -30,7 +29,7 @@ type ConnLocals interface {
 	Locals(key string) interface{}
 }
 
-func (h *WSHandler) UpdateProjectHandler(c *websocket.Conn, data json.RawMessage) {
+func (h *WSHandler) UpdateProjectHandler(c ConnWithLocals, data json.RawMessage) {
 	log.Println("Received update_project event")
 
 	var project models.EditProject

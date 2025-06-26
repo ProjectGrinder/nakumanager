@@ -6,12 +6,11 @@ import (
 	"encoding/json"
 	"log"
 
-	"github.com/gofiber/contrib/websocket"
 	"github.com/nack098/nakumanager/internal/db"
 	models "github.com/nack098/nakumanager/internal/models"
 )
 
-func (h *WSHandler) UpdateViewHandler(c *websocket.Conn, data json.RawMessage) {
+func (h *WSHandler) UpdateViewHandler(c ConnWithLocals, data json.RawMessage) {
 	var view models.EditView
 
 	if err := json.Unmarshal(data, &view); err != nil {

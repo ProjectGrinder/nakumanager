@@ -5,12 +5,11 @@ import (
 	"encoding/json"
 	"log"
 
-	"github.com/gofiber/contrib/websocket"
 	"github.com/nack098/nakumanager/internal/db"
 	models "github.com/nack098/nakumanager/internal/models"
 )
 
-func (h *WSHandler) UpdateIssueHandler(c *websocket.Conn, data json.RawMessage) {
+func (h *WSHandler) UpdateIssueHandler(c ConnWithLocals, data json.RawMessage) {
 	log.Println("Received update_issue event")
 
 	var issue models.EditIssue
@@ -38,7 +37,6 @@ func (h *WSHandler) UpdateIssueHandler(c *websocket.Conn, data json.RawMessage) 
 		log.Println("Unauthorized update_issue: not owner and no assignee")
 		return
 	}
-
 
 	if issue.Title == nil || issue.Status == nil || issue.TeamID == nil || issue.OwnerID == nil {
 		log.Println("Missing required fields (Title, Status, TeamID, or OwnerID cannot be nil)")
