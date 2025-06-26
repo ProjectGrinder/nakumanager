@@ -18,7 +18,6 @@ vendor/
 
 /*.db
 /*.sqlite
-/internal/db/
 
 
 *.log

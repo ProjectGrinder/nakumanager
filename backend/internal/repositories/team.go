@@ -23,6 +23,8 @@ type TeamRepository interface {
 	GetLeaderByTeamID(ctx context.Context, userID string) (string, error)
 	IsMemberInTeam(ctx context.Context, teamID, userID string) (bool, error)
 	IsTeamExists(ctx context.Context, teamID string) (bool, error)
+	RenameTeam(ctx context.Context, teamID, name string) error
+	SetLeaderToTeam(ctx context.Context, teamID, userID string) error
 }
 
 type teamRepo struct {
@@ -105,4 +107,22 @@ func (r *teamRepo) IsTeamExists(ctx context.Context, teamID string) (bool, error
 		return false, err
 	}
 	return count > 0, nil
+}
+
+func (r *teamRepo) RenameTeam(ctx context.Context, teamID, name string) error {
+	return r.queries.RenameTeam(ctx, db.RenameTeamParams{ID: teamID, Name: name})
+}
+
+func (r *teamRepo) SetLeaderToTeam(ctx context.Context, teamID string, userID string) error {
+	var leader sql.NullString
+	if userID == "" {
+		leader = sql.NullString{Valid: false}
+	} else {
+		leader = sql.NullString{String: userID, Valid: true}
+	}
+
+	return r.queries.SetLeaderToTeam(ctx, db.SetLeaderToTeamParams{
+		LeaderID: leader,
+		ID:       teamID,
+	})
 }

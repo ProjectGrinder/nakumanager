@@ -68,10 +68,10 @@ type User struct {
 }
 
 type View struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	UserID string `json:"user_id"`
-	TeamID string `json:"team_id"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	CreatedBy string `json:"created_by"`
+	TeamID    string `json:"team_id"`
 }
 
 type ViewGroupBy struct {

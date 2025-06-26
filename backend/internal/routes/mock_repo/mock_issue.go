@@ -50,3 +50,8 @@ func (m *MockIssueRepo) GetIssueByUserID(ctx context.Context, userID string) ([]
 	args := m.Called(ctx, userID)
 	return args.Get(0).([]db.Issue), args.Error(1)
 }
+
+func (m *MockIssueRepo) UpdateIssue(ctx context.Context, params db.UpdateIssueParams) error {
+	args := m.Called(ctx, params)
+	return args.Error(0)
+}

@@ -12,7 +12,7 @@ import (
 	"github.com/nack098/nakumanager/internal/db"
 	models "github.com/nack098/nakumanager/internal/models"
 	"github.com/nack098/nakumanager/internal/routes"
-	mocks "github.com/nack098/nakumanager/internal/routes/test/mock_repo"
+	mocks "github.com/nack098/nakumanager/internal/routes/mock_repo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

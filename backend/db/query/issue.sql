@@ -44,4 +44,19 @@ WHERE ia.issue_id = ?;
 SELECT i.*
 FROM issues i
 JOIN issue_assignees ia ON i.id = ia.issue_id
-WHERE ia.user_id = ?
+WHERE ia.user_id = ?;
+
+-- name: UpdateIssue :exec
+UPDATE issues
+SET
+    title = ?,
+    content = ?,
+    priority = ?,
+    status = ?,
+    project_id = ?,
+    team_id = ?,
+    start_date = ?,
+    end_date = ?,
+    label = ?,
+    owner_id = ?
+WHERE id = ?;

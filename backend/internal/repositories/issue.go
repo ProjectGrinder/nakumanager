@@ -15,6 +15,7 @@ type IssueRepository interface {
 	ListIssuesByTeamID(ctx context.Context, teamID string) ([]db.Issue, error)
 	RemoveAssigneeFromIssue(ctx context.Context, data db.RemoveAssigneeFromIssueParams) error
 	GetIssueByUserID(ctx context.Context, userID string) ([]db.Issue, error)
+	UpdateIssue(ctx context.Context, params db.UpdateIssueParams) error
 }
 
 type issueRepo struct {
@@ -45,7 +46,6 @@ func (r *issueRepo) ListAssigneesByIssueID(ctx context.Context, issueID string) 
 	return r.queries.ListAssigneesByIssueID(ctx, issueID)
 }
 
-
 func (r *issueRepo) ListIssuesByTeamID(ctx context.Context, teamID string) ([]db.Issue, error) {
 	return r.queries.ListIssuesByTeamID(ctx, teamID)
 }
@@ -58,3 +58,6 @@ func (r *issueRepo) GetIssueByUserID(ctx context.Context, userID string) ([]db.I
 	return r.queries.GetIssueByUserID(ctx, userID)
 }
 
+func (r *issueRepo) UpdateIssue(ctx context.Context, params db.UpdateIssueParams) error {
+	return r.queries.UpdateIssue(ctx, params)
+}

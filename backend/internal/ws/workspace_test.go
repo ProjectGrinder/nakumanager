@@ -2,50 +2,102 @@ package ws_test
 
 import (
 	"encoding/json"
-	"net/url"
 	"testing"
 
-	fiberWs "github.com/gofiber/contrib/websocket"
-	"github.com/gofiber/fiber/v2"
-	gorillaWs "github.com/gorilla/websocket"
+	models "github.com/nack098/nakumanager/internal/models"
+	mocks "github.com/nack098/nakumanager/internal/routes/mock_repo"
 	"github.com/nack098/nakumanager/internal/ws"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
-func setupWebSocketWorkSpaceApp() *fiber.App {
-	app := fiber.New()
-	wsGroup := app.Group("/ws", ws.WebSocketMiddleware)
-	wsGroup.Get("/", fiberWs.New(ws.CentralWebSocketHandler))
-	return app
+
+func TestUpdateWorkspaceHandler_RenameWorkspace(t *testing.T) {
+	mockRepo := new(mocks.MockWorkspaceRepo)
+	mockRepo.On("RenameWorkspace", mock.Anything, "ws-123", "New Name").Return(nil)
+
+	handler := ws.NewWSHandler(mockRepo, nil, nil, nil, nil, nil)
+
+	var broadcastCalled bool
+	var broadcastData map[string]interface{}
+	handler.BroadcastFunc = func(msg interface{}) {
+		broadcastCalled = true
+		broadcastData = msg.(map[string]interface{})
+	}
+
+	payload := models.EditWorkspace{
+		WorkspaceID: "ws-123",
+		Name:        "New Name",
+	}
+	data, _ := json.Marshal(payload)
+
+	handler.UpdateWorkspaceHandler(nil, data)
+
+	assert.True(t, broadcastCalled, "Broadcast should be called")
+	assert.Equal(t, "workspace_renamed", broadcastData["event"])
+	dataMap := broadcastData["data"].(map[string]interface{})
+	assert.Equal(t, "ws-123", dataMap["workspace_id"])
+	assert.Equal(t, "New Name", dataMap["new_name"])
+
+	mockRepo.AssertExpectations(t)
 }
 
-func TestUpdateWorkSpaceHandler(t *testing.T) {
-	app := setupWebSocketWorkSpaceApp()
+func TestUpdateWorkspaceHandler_AddMemberToWorkspace(t *testing.T) {
+	mockRepo := new(mocks.MockWorkspaceRepo)
+	mockRepo.On("AddMemberToWorkspace", mock.Anything, "ws-123", "user-456").Return(nil)
 
-	go func() {
-		err := app.Listen(":3000")
-		if err != nil {
-			t.Log("Server error:", err)
-		}
-	}()
-	defer app.Shutdown()
+	handler := ws.NewWSHandler(mockRepo, nil, nil, nil, nil, nil)
 
-	u := url.URL{Scheme: "ws", Host: "localhost:3000", Path: "/ws/"}
-
-	conn, _, err := gorillaWs.DefaultDialer.Dial(u.String(), nil)
-	assert.NoError(t, err)
-	defer conn.Close()
-
-	message := map[string]interface{}{
-		"event": "update_workspace",
-		"data":  map[string]interface{}{},
+	var broadcastCalled bool
+	var broadcastData map[string]interface{}
+	handler.BroadcastFunc = func(msg interface{}) {
+		broadcastCalled = true
+		broadcastData = msg.(map[string]interface{})
 	}
-	payload, _ := json.Marshal(message)
-	err = conn.WriteMessage(gorillaWs.TextMessage, payload)
-	assert.NoError(t, err)
 
-	_, resp, err := conn.ReadMessage()
-	assert.NoError(t, err)
+	payload := models.EditWorkspace{
+		WorkspaceID: "ws-123",
+		AddMember:   "user-456",
+	}
+	data, _ := json.Marshal(payload)
 
-	assert.Equal(t, "workspace updated", string(resp))
+	handler.UpdateWorkspaceHandler(nil, data)
+
+	assert.True(t, broadcastCalled, "Broadcast should be called")
+	assert.Equal(t, "workspace_member_added", broadcastData["event"])
+	dataMap := broadcastData["data"].(map[string]interface{})
+	assert.Equal(t, "ws-123", dataMap["workspace_id"])
+	assert.Equal(t, "user-456", dataMap["user_id"])
+
+	mockRepo.AssertExpectations(t)
+}
+
+func TestUpdateWorkspaceHandler_RemoveMemberFromWorkspace(t *testing.T) {
+	mockRepo := new(mocks.MockWorkspaceRepo)
+	mockRepo.On("RemoveMemberFromWorkspace", mock.Anything, "ws-123", "user-456").Return(nil)
+
+	handler := ws.NewWSHandler(mockRepo, nil, nil, nil, nil, nil)
+
+	var broadcastCalled bool
+	var broadcastData map[string]interface{}
+	handler.BroadcastFunc = func(msg interface{}) {
+		broadcastCalled = true
+		broadcastData = msg.(map[string]interface{})
+	}
+
+	payload := models.EditWorkspace{
+		WorkspaceID:  "ws-123",
+		RemoveMember: "user-456",
+	}
+	data, _ := json.Marshal(payload)
+
+	handler.UpdateWorkspaceHandler(nil, data)
+
+	assert.True(t, broadcastCalled, "Broadcast should be called")
+	assert.Equal(t, "workspace_member_removed", broadcastData["event"])
+	dataMap := broadcastData["data"].(map[string]interface{})
+	assert.Equal(t, "ws-123", dataMap["workspace_id"])
+	assert.Equal(t, "user-456", dataMap["user_id"])
+
+	mockRepo.AssertExpectations(t)
 }

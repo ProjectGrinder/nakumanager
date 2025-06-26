@@ -2,50 +2,91 @@ package ws_test
 
 import (
 	"encoding/json"
-	"net/url"
 	"testing"
+	"time"
 
-	fiberWs "github.com/gofiber/contrib/websocket"
-	"github.com/gofiber/fiber/v2"
-	gorillaWs "github.com/gorilla/websocket"
+	"github.com/nack098/nakumanager/internal/db"
+	models "github.com/nack098/nakumanager/internal/models"
+	mocks "github.com/nack098/nakumanager/internal/routes/mock_repo"
 	"github.com/nack098/nakumanager/internal/ws"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
-func setupWebSocketIssueApp() *fiber.App {
-	app := fiber.New()
-	wsGroup := app.Group("/ws", ws.WebSocketMiddleware)
-	wsGroup.Get("/", fiberWs.New(ws.CentralWebSocketHandler))
-	return app
-}
+func TestUpdateIssueHandler_Success(t *testing.T) {
+	mockIssueRepo := new(mocks.MockIssueRepo)
+	mockTeamRepo := new(mocks.MockTeamRepo)
+	mockUserRepo := new(mocks.MockUserRepo)
+	mockConn := new(MockConn)
 
-func TestUpdateIssueHandler(t *testing.T) {
-	app := setupWebSocketIssueApp()
+	handler := ws.NewWSHandler(
+		nil,
+		mockTeamRepo,
+		nil,
+		mockIssueRepo,
+		mockUserRepo,
+		nil,
+	)
 
-	go func() {
-		err := app.Listen(":3000")
-		if err != nil {
-			t.Log("Server error:", err)
-		}
-	}()
-	defer app.Shutdown()
+	userID := "user-123"
+	issueID := "issue-1"
 
-	u := url.URL{Scheme: "ws", Host: "localhost:3000", Path: "/ws/"}
+	mockConn.On("Locals", "userID").Return(userID)
 
-	conn, _, err := gorillaWs.DefaultDialer.Dial(u.String(), nil)
-	assert.NoError(t, err)
-	defer conn.Close()
-
-	message := map[string]interface{}{
-		"event": "update_issue",
-		"data":  map[string]interface{}{},
+	existingIssue := db.Issue{
+		ID:      issueID,
+		OwnerID: userID,
 	}
-	payload, _ := json.Marshal(message)
-	err = conn.WriteMessage(gorillaWs.TextMessage, payload)
-	assert.NoError(t, err)
+	mockIssueRepo.On("GetIssueByID", mock.Anything, issueID).Return(existingIssue, nil)
+	mockTeamRepo.On("IsMemberInTeam", mock.Anything, "team-1", userID).Return(true, nil)
+	mockUserRepo.On("GetUserByID", mock.Anything, "assignee-123").Return(db.User{}, nil)
+	mockIssueRepo.On("AddAssigneeToIssue", mock.Anything, db.AddAssigneeToIssueParams{
+		IssueID: issueID,
+		UserID:  "assignee-123",
+	}).Return(nil)
+	mockIssueRepo.On("UpdateIssue", mock.Anything, mock.AnythingOfType("db.UpdateIssueParams")).Return(nil)
 
-	_, resp, err := conn.ReadMessage()
-	assert.NoError(t, err)
+	called := false
+	handler.BroadcastFunc = func(data interface{}) {
+		broadcastData := data.(map[string]interface{})
+		assert.Equal(t, "issue_updated", broadcastData["event"])
+		assert.Equal(t, issueID, broadcastData["data"].(models.EditIssue).ID)
+		called = true
+	}
 
-	assert.Equal(t, "issue updated", string(resp))
+	title := "Issue Title"
+	status := "open"
+	teamID := "team-1"
+	ownerID := userID
+	assignee := "assignee-123"
+	priority := "high"
+	content := "Important content"
+	projectID := "project-456"
+	label := "bug"
+	start := time.Now()
+	end := start.Add(24 * time.Hour)
+
+	issue := models.EditIssue{
+		ID:        issueID,
+		Title:     &title,
+		Status:    &status,
+		TeamID:    &teamID,
+		OwnerID:   &ownerID,
+		Assignee:  &assignee,
+		Priority:  &priority,
+		Content:   &content,
+		ProjectID: &projectID,
+		Label:     &label,
+		StartDate: &start,
+		EndDate:   &end,
+	}
+
+	data, _ := json.Marshal(issue)
+	handler.UpdateIssueHandler(mockConn, data)
+
+	assert.True(t, called, "Broadcast should be called")
+	mockConn.AssertExpectations(t)
+	mockIssueRepo.AssertExpectations(t)
+	mockTeamRepo.AssertExpectations(t)
+	mockUserRepo.AssertExpectations(t)
 }

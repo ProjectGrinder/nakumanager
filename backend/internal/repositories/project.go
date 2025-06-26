@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/nack098/nakumanager/internal/db"
 )
@@ -17,6 +18,9 @@ type ProjectRepository interface {
 	RemoveMemberFromProject(ctx context.Context, data db.RemoveMemberFromProjectParams) error
 	UpdateProject(ctx context.Context, data db.UpdateProjectParams) error
 	IsProjectExists(ctx context.Context, projectID string) (bool, error)
+	UpdateProjectName(ctx context.Context, projectID, name string) error
+	UpdateProjectLeader(ctx context.Context, projectID, leaderID string) error
+	UpdateProjectWorkspace(ctx context.Context, projectID, workspaceID string) error
 }
 
 type projectRepo struct {
@@ -69,4 +73,30 @@ func (r *projectRepo) IsProjectExists(ctx context.Context, projectID string) (bo
 		return false, err
 	}
 	return exists > 0, nil
+}
+
+func (r *projectRepo) UpdateProjectName(ctx context.Context, projectID, name string) error {
+	return r.queries.UpdateProjectName(ctx, db.UpdateProjectNameParams{
+		ID:   projectID,
+		Name: name,
+	})
+}
+
+func (r *projectRepo) UpdateProjectLeader(ctx context.Context, projectID, leaderID string) error {
+	leader := sql.NullString{
+		String: leaderID,
+		Valid:  leaderID != "",
+	}
+
+	return r.queries.UpdateLeaderID(ctx, db.UpdateLeaderIDParams{
+		ID:       projectID,
+		LeaderID: leader,
+	})
+}
+
+func (r *projectRepo) UpdateProjectWorkspace(ctx context.Context, projectID, workspaceID string) error {
+	return r.queries.UpdateWorkspaceID(ctx, db.UpdateWorkspaceIDParams{
+		ID:          projectID,
+		WorkspaceID: workspaceID,
+	})
 }
