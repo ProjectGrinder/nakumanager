@@ -450,9 +450,9 @@ func TestRemoveMemberFromWorkspace_WorkspaceIDRequired(t *testing.T) {
 
 	app := fiber.New()
 	app.Use(withUserID("user-123"))
-	app.Post("/workspaces/:workspaceid/members/remove", handler.RemoveMemberFromWorkspace)
+	app.Post("/workspaces/:workspaceid/members", handler.RemoveMemberFromWorkspace)
 
-	req := httptest.NewRequest(http.MethodPost, "/workspaces/empty/members/remove", strings.NewReader(`{"user_id":"user-456"}`))
+	req := httptest.NewRequest(http.MethodPost, "/workspaces/empty/members", strings.NewReader(`{"user_id":"user-456"}`))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, -1)
@@ -465,9 +465,9 @@ func TestRemoveMemberFromWorkspace_Unauthorized(t *testing.T) {
 	handler := &routes.WorkspaceHandler{Repo: repo}
 
 	app := fiber.New()
-	app.Post("/workspaces/:workspaceid/members/remove", handler.RemoveMemberFromWorkspace)
+	app.Post("/workspaces/:workspaceid/members", handler.RemoveMemberFromWorkspace)
 
-	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members/remove", strings.NewReader(`{"user_id":"user-456"}`))
+	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members", strings.NewReader(`{"user_id":"user-456"}`))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, -1)
@@ -481,11 +481,11 @@ func TestRemoveMemberFromWorkspace_WorkspaceNotFound(t *testing.T) {
 
 	app := fiber.New()
 	app.Use(withUserID("user-123"))
-	app.Post("/workspaces/:workspaceid/members/remove", handler.RemoveMemberFromWorkspace)
+	app.Post("/workspaces/:workspaceid/members", handler.RemoveMemberFromWorkspace)
 
 	repo.On("GetWorkspaceByID", mock.Anything, "ws-1").Return(db.Workspace{}, errors.New("not found"))
 
-	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members/remove", strings.NewReader(`{"user_id":"user-456"}`))
+	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members", strings.NewReader(`{"user_id":"user-456"}`))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, -1)
@@ -501,11 +501,11 @@ func TestRemoveMemberFromWorkspace_Forbidden(t *testing.T) {
 
 	app := fiber.New()
 	app.Use(withUserID("user-123"))
-	app.Post("/workspaces/:workspaceid/members/remove", handler.RemoveMemberFromWorkspace)
+	app.Post("/workspaces/:workspaceid/members", handler.RemoveMemberFromWorkspace)
 
 	repo.On("GetWorkspaceByID", mock.Anything, "ws-1").Return(ws, nil)
 
-	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members/remove", strings.NewReader(`{"user_id":"user-456"}`))
+	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members", strings.NewReader(`{"user_id":"user-456"}`))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, -1)
