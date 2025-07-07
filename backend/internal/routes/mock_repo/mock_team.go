@@ -4,6 +4,7 @@ import (
 	"context"
 
 	db "github.com/nack098/nakumanager/internal/db"
+	models "github.com/nack098/nakumanager/internal/models"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -11,17 +12,17 @@ type MockTeamRepo struct {
 	mock.Mock
 }
 
-func (m *MockTeamRepo) AddMemberToTeam(ctx context.Context, data db.AddMemberToTeamParams) error {
+func (m *MockTeamRepo) AddMemberToTeam(ctx context.Context, data models.AddMemberToTeam) error {
 	args := m.Called(ctx, data)
 	return args.Error(0)
 }
 
-func (m *MockTeamRepo) RemoveMemberFromTeam(ctx context.Context, data db.RemoveMemberFromTeamParams) error {
+func (m *MockTeamRepo) RemoveMemberFromTeam(ctx context.Context, data models.RemoveMemberFromTeam) error {
 	args := m.Called(ctx, data)
 	return args.Error(0)
 }
 
-func (m *MockTeamRepo) CreateTeam(ctx context.Context, data db.CreateTeamParams) error {
+func (m *MockTeamRepo) CreateTeam(ctx context.Context, data models.CreateTeam) error {
 	args := m.Called(ctx, data)
 	return args.Error(0)
 }
@@ -76,12 +77,12 @@ func (m *MockTeamRepo) IsTeamExists(ctx context.Context, teamID string) (bool, e
 	return args.Bool(0), args.Error(1)
 }
 
-func (m *MockTeamRepo) RenameTeam(ctx context.Context, teamID, name string) error {
-	args := m.Called(ctx, teamID, name)
+func (m *MockTeamRepo) RenameTeam(ctx context.Context, data models.RenameTeam) error {
+	args := m.Called(ctx, data)
 	return args.Error(0)
 }
 
-func (m *MockTeamRepo) SetLeaderToTeam(ctx context.Context, teamID, userID string) error {
-	args := m.Called(ctx, teamID, userID)
+func (m *MockTeamRepo) SetLeaderToTeam(ctx context.Context, data models.SetTeamLeader) error {
+	args := m.Called(ctx, data)
 	return args.Error(0)
 }
