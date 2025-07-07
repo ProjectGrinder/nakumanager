@@ -1,15 +1,29 @@
 package model
 
-type Team struct {
-	ID     string `json:"id" validate:"required,uuid"`
-	Name   string `json:"name" validate:"required"`
-	Leader User   `json:"leader"`
+import "database/sql"
+
+type CreateTeam struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	WorkspaceID string `json:"workspace_id"`
 }
 
-type EditTeam struct {
-	TeamID       string `json:"team_id"`
-	Name         string `json:"name"`
-	AddMember    string `json:"add_member"`
-	RemoveMember string `json:"remove_member"`
-	Leader       string `json:"leader"`
+type AddMemberToTeam struct {
+	TeamID string `json:"team_id"`
+	UserID string `json:"user_id"`
+}
+
+type RemoveMemberFromTeam struct {
+	TeamID string `json:"team_id"`
+	UserID string `json:"user_id"`
+}
+
+type RenameTeam struct {
+	TeamID string `json:"team_id"`
+	Name   string `json:"name"`
+}
+
+type SetTeamLeader struct {
+	TeamID   string         `json:"id"`
+	LeaderID sql.NullString `json:"leader_id"`
 }
