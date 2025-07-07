@@ -123,7 +123,7 @@ func (h *WorkspaceHandler) DeleteWorkspace(c *fiber.Ctx) error {
 func (h *WorkspaceHandler) AddMemberToWorkspace(c *fiber.Ctx) error {
 	//Check if workspace id is provided
 	workspaceID := strings.TrimSpace(c.Params("workspaceid"))
-	if workspaceID == "" {
+	if workspaceID == "" || workspaceID == "empty"{
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "workspace id is required"})
 	}
 
@@ -150,6 +150,17 @@ func (h *WorkspaceHandler) AddMemberToWorkspace(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
 	}
 
+	if err := validate.Struct(member); err != nil {
+		if validationErrors, ok := err.(validator.ValidationErrors); ok {
+			errMessages := make([]string, 0, len(validationErrors))
+			for _, ve := range validationErrors {
+				errMessages = append(errMessages, ve.Field()+" is invalid: "+ve.Tag())
+			}
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": errMessages})
+		}
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "validation failed"})
+	}
+
 	//Add member
 	err = h.Repo.AddMemberToWorkspace(c.Context(), workspaceID, member.MemberID)
 	if err != nil {
@@ -163,7 +174,7 @@ func (h *WorkspaceHandler) AddMemberToWorkspace(c *fiber.Ctx) error {
 func (h *WorkspaceHandler) RemoveMemberFromWorkspace(c *fiber.Ctx) error {
 	//Check if workspace id is provided
 	workspaceID := strings.TrimSpace(c.Params("workspaceid"))
-	if workspaceID == "" {
+	if workspaceID == "" || workspaceID == "empty" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "workspace id is required"})
 	}
 
@@ -190,6 +201,16 @@ func (h *WorkspaceHandler) RemoveMemberFromWorkspace(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
 	}
 
+	if err := validate.Struct(member); err != nil {
+		if validationErrors, ok := err.(validator.ValidationErrors); ok {
+			errMessages := make([]string, 0, len(validationErrors))
+			for _, ve := range validationErrors {
+				errMessages = append(errMessages, ve.Field()+" is invalid: "+ve.Tag())
+			}
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": errMessages})
+		}
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "validation failed"})
+	}
 	//Remove member
 	err = h.Repo.RemoveMemberFromWorkspace(c.Context(), workspaceID, member.MemberID)
 	if err != nil {
@@ -227,6 +248,17 @@ func (h *WorkspaceHandler) RenameWorkSpace(c *fiber.Ctx) error {
 	var req models.RenameWorkSpaceRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+	}
+
+	if err := validate.Struct(req); err != nil {
+		if validationErrors, ok := err.(validator.ValidationErrors); ok {
+			errMessages := make([]string, 0, len(validationErrors))
+			for _, ve := range validationErrors {
+				errMessages = append(errMessages, ve.Field()+" is invalid: "+ve.Tag())
+			}
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": errMessages})
+		}
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "validation failed"})
 	}
 
 	//Rename workspace
