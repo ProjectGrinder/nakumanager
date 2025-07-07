@@ -15,23 +15,20 @@ import (
 	mocks "github.com/nack098/nakumanager/internal/routes/mock_repo"
 )
 
-func mockUserMiddleware(userID string) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		c.Locals("userID", userID)
-		return c.Next()
-	}
-}
-
 func setUpTeamApp(h *routes.TeamHandler) *fiber.App {
 	app := fiber.New()
-	app.Use(mockUserMiddleware("user-123"))
+	app.Use(withUserID("user-123"))
 	app.Post("/teams", h.CreateTeam)
 	app.Get("/teams", h.GetTeamsByUserID)
-	app.Delete("/teams", h.DeleteTeam)
+	app.Post("/teams/:id/members", h.AddMemberToTeam)
+	app.Delete("/teams/:id/members", h.RemoveMemberFromTeam)
+	app.Post("/teams/:id/rename", h.RenameTeam)
+	app.Post("/teams/:id/leader", h.SetTeamLeader)
+	app.Delete("/teams/:id", h.DeleteTeam)
 	return app
 }
 
-func TestCreateTeam(t *testing.T) {
+func TestCreateTeam_Success(t *testing.T) {
 
 	mockTeamRepo := new(mocks.MockTeamRepo)
 	mockWorkspaceRepo := new(mocks.MockWorkspaceRepo)
@@ -67,12 +64,11 @@ func TestCreateTeam(t *testing.T) {
 	mockTeamRepo.AssertExpectations(t)
 }
 
-func TestGetTeamByUserID(t *testing.T) {
+func TestGetTeamByUserID_Success(t *testing.T) {
 
 	mockTeamRepo := new(mocks.MockTeamRepo)
 	mockWorkspaceRepo := new(mocks.MockWorkspaceRepo)
 	handler := routes.NewTeamHandler(mockTeamRepo, mockWorkspaceRepo)
-
 
 	mockTeamRepo.On("GetTeamsByUserID", mock.Anything, "user-123").
 		Return([]db.Team{
@@ -91,8 +87,7 @@ func TestGetTeamByUserID(t *testing.T) {
 	assert.Contains(t, string(body), `"Team A"`)
 }
 
-func TestDeleteTeam(t *testing.T) {
-
+func TestDeleteTeam_Success(t *testing.T) {
 	mockTeamRepo := new(mocks.MockTeamRepo)
 	mockWorkspaceRepo := new(mocks.MockWorkspaceRepo)
 	handler := routes.NewTeamHandler(mockTeamRepo, mockWorkspaceRepo)
@@ -100,27 +95,46 @@ func TestDeleteTeam(t *testing.T) {
 	teamID := "team-123"
 	userID := "user-123"
 
-
-	mockTeamRepo.On("GetOwnerByTeamID", mock.Anything, teamID).
-		Return(userID, nil)
-	mockTeamRepo.On("GetLeaderByTeamID", mock.Anything, teamID).
-		Return(userID, nil)
-	mockTeamRepo.On("DeleteTeam", mock.Anything, teamID).
-		Return(nil)
-	mockTeamRepo.On("DeleteTeamFromTeamMembers", mock.Anything, teamID).
-		Return(nil)
+	mockTeamRepo.On("GetOwnerByTeamID", mock.Anything, teamID).Return(userID, nil)
+	mockTeamRepo.On("GetLeaderByTeamID", mock.Anything, teamID).Return(userID, nil)
+	mockTeamRepo.On("DeleteTeam", mock.Anything, teamID).Return(nil)
 
 	app := setUpTeamApp(handler)
 
 	req := httptest.NewRequest("DELETE", "/teams/"+teamID, nil)
-	resp, err := app.Test(req)
+	req.Header.Set("Content-Type", "application/json")
 
+	resp, err := app.Test(req)
 	assert.NoError(t, err)
 	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
 	body, _ := io.ReadAll(resp.Body)
 	assert.Contains(t, string(body), "team deleted successfully")
 
+	mockTeamRepo.AssertExpectations(t)
+}
+
+func TestAddMemberToTeam_Success(t *testing.T) {
+	mockTeamRepo := new(mocks.MockTeamRepo)
+	mockWorkspaceRepo := new(mocks.MockWorkspaceRepo)
+	handler := routes.NewTeamHandler(mockTeamRepo, mockWorkspaceRepo)
+
+	teamID := "team-123"
+	userID := "user-456"
+
+	mockTeamRepo.On("AddMemberToTeam", mock.Anything, teamID, userID).Return(nil)
+
+	app := setUpTeamApp(handler)
+
+	req := httptest.NewRequest("POST", "/teams/"+teamID+"/members", nil)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	assert.NoError(t, err)
+	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+
+	body, _ := io.ReadAll(resp.Body)
+	assert.Contains(t, string(body), "member added to team successfully")
 
 	mockTeamRepo.AssertExpectations(t)
 }
