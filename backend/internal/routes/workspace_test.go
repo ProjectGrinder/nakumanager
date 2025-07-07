@@ -62,6 +62,7 @@ func TestCreateWorkspace_InvalidJSON(t *testing.T) {
 	repo := new(mocks.MockWorkspaceRepo)
 	handler := routes.WorkspaceHandler{Repo: repo}
 	app := fiber.New()
+	app.Use(withUserID("user-123"))
 	app.Post("/workspaces", handler.CreateWorkspace)
 
 	req := httptest.NewRequest(http.MethodPost, "/workspaces", strings.NewReader("{invalid json"))
@@ -97,7 +98,7 @@ func TestCreateWorkspace_ValidationError(t *testing.T) {
 	app.Use(withUserID("user-123"))
 	app.Post("/workspaces", handler.CreateWorkspace)
 
-	payload := map[string]string{"name": ""} 
+	payload := map[string]string{"name": ""}
 	body, _ := json.Marshal(payload)
 
 	req := httptest.NewRequest(http.MethodPost, "/workspaces", bytes.NewReader(body))
@@ -209,7 +210,7 @@ func TestDeleteWorkspace_WorkspaceIDRequired(t *testing.T) {
 	app.Use(withUserID("user-123"))
 	app.Delete("/workspaces/:workspaceid?", handler.DeleteWorkspace)
 
-	req := httptest.NewRequest(http.MethodDelete, "/workspaces/", nil) 
+	req := httptest.NewRequest(http.MethodDelete, "/workspaces/", nil)
 	resp, err := app.Test(req, -1)
 	assert.NoError(t, err)
 	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
@@ -307,10 +308,10 @@ func TestAddMemberToWorkspace_WorkspaceIDRequired(t *testing.T) {
 	app.Use(withUserID("user-123"))
 	app.Post("/workspaces/:workspaceid/members", handler.AddMemberToWorkspace)
 
-	req := httptest.NewRequest(http.MethodPost, "/workspaces/", nil) 
+	req := httptest.NewRequest(http.MethodPost, "/workspaces/empty/members", nil)
 	resp, err := app.Test(req, -1)
 	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusNotFound, resp.StatusCode) 
+	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 }
 
 func TestAddMemberToWorkspace_Unauthorized(t *testing.T) {
@@ -398,7 +399,7 @@ func TestAddMemberToWorkspace_AddMemberFail(t *testing.T) {
 	repo.On("GetWorkspaceByID", mock.Anything, "ws-1").Return(ws, nil)
 	repo.On("AddMemberToWorkspace", mock.Anything, "ws-1", "user-456").Return(errors.New("fail add"))
 
-	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members", strings.NewReader(`{"user_id":"user-456"}`))
+	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members", strings.NewReader(`{"member_id":"user-456"}`))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, -1)
@@ -419,7 +420,7 @@ func TestAddMemberToWorkspace_Success(t *testing.T) {
 	repo.On("GetWorkspaceByID", mock.Anything, "ws-1").Return(ws, nil)
 	repo.On("AddMemberToWorkspace", mock.Anything, "ws-1", "user-456").Return(nil)
 
-	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members", strings.NewReader(`{"user_id":"user-456"}`))
+	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members", strings.NewReader(`{"member_id":"user-456"}`))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, -1)
@@ -545,7 +546,7 @@ func TestRemoveMemberFromWorkspace_RemoveMemberFail(t *testing.T) {
 	repo.On("GetWorkspaceByID", mock.Anything, "ws-1").Return(ws, nil)
 	repo.On("RemoveMemberFromWorkspace", mock.Anything, "ws-1", "user-456").Return(errors.New("fail remove"))
 
-	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members/remove", strings.NewReader(`{"user_id":"user-456"}`))
+	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members/remove", strings.NewReader(`{"member_id":"user-456"}`))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, -1)
@@ -566,7 +567,7 @@ func TestRemoveMemberFromWorkspace_Success(t *testing.T) {
 	repo.On("GetWorkspaceByID", mock.Anything, "ws-1").Return(ws, nil)
 	repo.On("RemoveMemberFromWorkspace", mock.Anything, "ws-1", "user-456").Return(nil)
 
-	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members/remove", strings.NewReader(`{"user_id":"user-456"}`))
+	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members/remove", strings.NewReader(`{"member_id":"user-456"}`))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, -1)
