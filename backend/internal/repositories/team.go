@@ -7,14 +7,14 @@ import (
 	"fmt"
 
 	"github.com/nack098/nakumanager/internal/db"
+	models "github.com/nack098/nakumanager/internal/models"
 )
 
 type TeamRepository interface {
-	AddMemberToTeam(ctx context.Context, data db.AddMemberToTeamParams) error
-	RemoveMemberFromTeam(ctx context.Context, data db.RemoveMemberFromTeamParams) error
-	CreateTeam(ctx context.Context, data db.CreateTeamParams) error
+	AddMemberToTeam(ctx context.Context, data models.AddMemberToTeam) error
+	RemoveMemberFromTeam(ctx context.Context, data models.RemoveMemberFromTeam) error
+	CreateTeam(ctx context.Context, data models.CreateTeam) error
 	DeleteTeam(ctx context.Context, id string) error
-	DeleteTeamFromTeamMembers(ctx context.Context, teamID string) error
 	GetTeamByID(ctx context.Context, id string) (db.Team, error)
 	GetTeamsByUserID(ctx context.Context, userID string) ([]db.Team, error)
 	ListTeamMembers(ctx context.Context, teamID string) ([]db.ListTeamMembersRow, error)
@@ -23,8 +23,8 @@ type TeamRepository interface {
 	GetLeaderByTeamID(ctx context.Context, userID string) (string, error)
 	IsMemberInTeam(ctx context.Context, teamID, userID string) (bool, error)
 	IsTeamExists(ctx context.Context, teamID string) (bool, error)
-	RenameTeam(ctx context.Context, teamID, name string) error
-	SetLeaderToTeam(ctx context.Context, teamID, userID string) error
+	RenameTeam(ctx context.Context, data models.RenameTeam) error
+	SetLeaderToTeam(ctx context.Context, data models.SetTeamLeader) error
 }
 
 type teamRepo struct {
@@ -35,24 +35,33 @@ func NewTeamRepository(q *db.Queries) TeamRepository {
 	return &teamRepo{queries: q}
 }
 
-func (r *teamRepo) AddMemberToTeam(ctx context.Context, data db.AddMemberToTeamParams) error {
-	return r.queries.AddMemberToTeam(ctx, data)
+func (r *teamRepo) AddMemberToTeam(ctx context.Context, data models.AddMemberToTeam) error {
+	model := db.AddMemberToTeamParams{
+		TeamID: data.TeamID,
+		UserID: data.UserID,
+	}
+	return r.queries.AddMemberToTeam(ctx, model)
 }
 
-func (r *teamRepo) RemoveMemberFromTeam(ctx context.Context, data db.RemoveMemberFromTeamParams) error {
-	return r.queries.RemoveMemberFromTeam(ctx, data)
+func (r *teamRepo) RemoveMemberFromTeam(ctx context.Context, data models.RemoveMemberFromTeam) error {
+	model := db.RemoveMemberFromTeamParams{
+		TeamID: data.TeamID,
+		UserID: data.UserID,
+	}
+	return r.queries.RemoveMemberFromTeam(ctx, model)
 }
 
-func (r *teamRepo) CreateTeam(ctx context.Context, data db.CreateTeamParams) error {
-	return r.queries.CreateTeam(ctx, data)
+func (r *teamRepo) CreateTeam(ctx context.Context, data models.CreateTeam) error {
+	model := db.CreateTeamParams{
+		ID:          data.ID,
+		Name:        data.Name,
+		WorkspaceID: data.WorkspaceID,
+	}
+	return r.queries.CreateTeam(ctx, model)
 }
 
 func (r *teamRepo) DeleteTeam(ctx context.Context, id string) error {
 	return r.queries.DeleteTeam(ctx, id)
-}
-
-func (r *teamRepo) DeleteTeamFromTeamMembers(ctx context.Context, teamID string) error {
-	return r.queries.DeleteTeamFromTeamMembers(ctx, teamID)
 }
 
 func (r *teamRepo) GetTeamByID(ctx context.Context, id string) (db.Team, error) {
@@ -109,20 +118,14 @@ func (r *teamRepo) IsTeamExists(ctx context.Context, teamID string) (bool, error
 	return count > 0, nil
 }
 
-func (r *teamRepo) RenameTeam(ctx context.Context, teamID, name string) error {
-	return r.queries.RenameTeam(ctx, db.RenameTeamParams{ID: teamID, Name: name})
+func (r *teamRepo) RenameTeam(ctx context.Context, data models.RenameTeam) error {
+	model := db.RenameTeamParams{ID: data.TeamID, Name: data.Name}
+	return r.queries.RenameTeam(ctx, model)
 }
 
-func (r *teamRepo) SetLeaderToTeam(ctx context.Context, teamID string, userID string) error {
-	var leader sql.NullString
-	if userID == "" {
-		leader = sql.NullString{Valid: false}
-	} else {
-		leader = sql.NullString{String: userID, Valid: true}
-	}
-
+func (r *teamRepo) SetLeaderToTeam(ctx context.Context, data models.SetTeamLeader) error {
 	return r.queries.SetLeaderToTeam(ctx, db.SetLeaderToTeamParams{
-		LeaderID: leader,
-		ID:       teamID,
+		LeaderID: data.LeaderID,
+		ID:       data.TeamID,
 	})
 }
