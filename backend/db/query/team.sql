@@ -1,5 +1,3 @@
-
-
 -- name: GetTeamsByUserID :many
 SELECT t.id, t.name, t.workspace_id, t.leader_id
 FROM teams t
@@ -8,9 +6,6 @@ WHERE tm.user_id = ?;
 
 -- name: DeleteTeam :exec
 DELETE FROM teams WHERE id = ?;
-
--- name: DeleteTeamFromTeamMembers :exec
-DELETE FROM team_members WHERE team_id = ?;
 
 -- name: ListTeams :many
 SELECT id, name, workspace_id, leader_id
