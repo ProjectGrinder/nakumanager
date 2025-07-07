@@ -25,7 +25,6 @@ type Querier interface {
 	DeleteIssue(ctx context.Context, id string) error
 	DeleteProject(ctx context.Context, id string) error
 	DeleteTeam(ctx context.Context, id string) error
-	DeleteTeamFromTeamMembers(ctx context.Context, teamID string) error
 	DeleteUser(ctx context.Context, id string) error
 	DeleteView(ctx context.Context, id string) error
 	DeleteWorkspace(ctx context.Context, id string) error

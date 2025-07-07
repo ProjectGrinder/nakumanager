@@ -50,15 +50,6 @@ func (q *Queries) DeleteTeam(ctx context.Context, id string) error {
 	return err
 }
 
-const deleteTeamFromTeamMembers = `-- name: DeleteTeamFromTeamMembers :exec
-DELETE FROM team_members WHERE team_id = ?
-`
-
-func (q *Queries) DeleteTeamFromTeamMembers(ctx context.Context, teamID string) error {
-	_, err := q.db.ExecContext(ctx, deleteTeamFromTeamMembers, teamID)
-	return err
-}
-
 const getLeaderByTeamID = `-- name: GetLeaderByTeamID :one
 SELECT leader_id
 FROM teams
