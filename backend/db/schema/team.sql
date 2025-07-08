@@ -2,7 +2,7 @@ CREATE TABLE teams (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     workspace_id TEXT NOT NULL,
-    leader_id TEXT,
+    leader_id TEXT NULL,
     FOREIGN KEY (workspace_id) REFERENCES workspaces(id),
     FOREIGN KEY (leader_id) REFERENCES users(id)
 );
