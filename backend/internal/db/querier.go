@@ -38,7 +38,7 @@ type Querier interface {
 	GetIssuesByStatus(ctx context.Context, arg GetIssuesByStatusParams) ([]Issue, error)
 	GetIssuesByTeamID(ctx context.Context, teamID string) ([]Issue, error)
 	GetLeaderByProjectID(ctx context.Context, id string) (interface{}, error)
-	GetLeaderByTeamID(ctx context.Context, id string) (sql.NullString, error)
+	GetLeaderByTeamID(ctx context.Context, id string) (interface{}, error)
 	GetOwnerByProjectID(ctx context.Context, id string) (string, error)
 	GetOwnerByTeamID(ctx context.Context, id string) (string, error)
 	GetProjectByID(ctx context.Context, id string) (Project, error)

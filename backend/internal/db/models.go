@@ -48,10 +48,10 @@ type ProjectMember struct {
 }
 
 type Team struct {
-	ID          string         `json:"id"`
-	Name        string         `json:"name"`
-	WorkspaceID string         `json:"workspace_id"`
-	LeaderID    sql.NullString `json:"leader_id"`
+	ID          string      `json:"id"`
+	Name        string      `json:"name"`
+	WorkspaceID string      `json:"workspace_id"`
+	LeaderID    interface{} `json:"leader_id"`
 }
 
 type TeamMember struct {

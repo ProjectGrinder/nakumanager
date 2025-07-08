@@ -56,9 +56,9 @@ FROM teams
 WHERE id = ?
 `
 
-func (q *Queries) GetLeaderByTeamID(ctx context.Context, id string) (sql.NullString, error) {
+func (q *Queries) GetLeaderByTeamID(ctx context.Context, id string) (interface{}, error) {
 	row := q.db.QueryRowContext(ctx, getLeaderByTeamID, id)
-	var leader_id sql.NullString
+	var leader_id interface{}
 	err := row.Scan(&leader_id)
 	return leader_id, err
 }
@@ -315,8 +315,8 @@ WHERE id = ?
 `
 
 type SetLeaderToTeamParams struct {
-	LeaderID sql.NullString `json:"leader_id"`
-	ID       string         `json:"id"`
+	LeaderID interface{} `json:"leader_id"`
+	ID       string      `json:"id"`
 }
 
 func (q *Queries) SetLeaderToTeam(ctx context.Context, arg SetLeaderToTeamParams) error {
