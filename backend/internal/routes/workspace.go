@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"log"
 	"strings"
 
 	"github.com/go-playground/validator"
@@ -9,8 +10,6 @@ import (
 	models "github.com/nack098/nakumanager/internal/models"
 	"github.com/nack098/nakumanager/internal/repositories"
 )
-
-var validate = validator.New()
 
 // Interface WorkspaceHandler
 type WorkspaceHandler struct {
@@ -120,152 +119,57 @@ func (h *WorkspaceHandler) DeleteWorkspace(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "workspace deleted successfully"})
 }
 
-func (h *WorkspaceHandler) AddMemberToWorkspace(c *fiber.Ctx) error {
-	//Check if workspace id is provided
-	workspaceID := strings.TrimSpace(c.Params("workspaceid"))
-	if workspaceID == "" || workspaceID == "empty"{
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "workspace id is required"})
-	}
-
-	//Check if user is authenticated
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
-
-	//Get workspace by workspace id
-	workspace, err := h.Repo.GetWorkspaceByID(c.Context(), workspaceID)
-	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "workspace not found"})
-	}
-
-	//Check if user is owner
-	if workspace.OwnerID != userID {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "you are not authorized to add members"})
-	}
-
-	//Parse request
-	var member models.AddMemberRequest
-	if err := c.BodyParser(&member); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
-	}
-
-	if err := validate.Struct(member); err != nil {
-		if validationErrors, ok := err.(validator.ValidationErrors); ok {
-			errMessages := make([]string, 0, len(validationErrors))
-			for _, ve := range validationErrors {
-				errMessages = append(errMessages, ve.Field()+" is invalid: "+ve.Tag())
-			}
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": errMessages})
-		}
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "validation failed"})
-	}
-
-	//Add member
-	err = h.Repo.AddMemberToWorkspace(c.Context(), workspaceID, member.MemberID)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to add member to workspace"})
-	}
-
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "member added successfully"})
-}
-
-// RemoveMemberFromWorkspace
-func (h *WorkspaceHandler) RemoveMemberFromWorkspace(c *fiber.Ctx) error {
-	//Check if workspace id is provided
+func (h *WorkspaceHandler) UpdateWorkspace(c *fiber.Ctx) error {
 	workspaceID := strings.TrimSpace(c.Params("workspaceid"))
 	if workspaceID == "" || workspaceID == "empty" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "workspace id is required"})
 	}
 
-	//Check if user is authenticated
 	userID, ok := c.Locals("userID").(string)
 	if !ok || userID == "" {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
 	}
 
-	//Get workspace
 	workspace, err := h.Repo.GetWorkspaceByID(c.Context(), workspaceID)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "workspace not found"})
 	}
 
-	//Check if user is owner
 	if workspace.OwnerID != userID {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "you are not authorized to remove members"})
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "you are not authorized to update this workspace"})
 	}
 
-	//Parse request
-	var member models.RemoveMemberRequest
-	if err := c.BodyParser(&member); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
-	}
-
-	if err := validate.Struct(member); err != nil {
-		if validationErrors, ok := err.(validator.ValidationErrors); ok {
-			errMessages := make([]string, 0, len(validationErrors))
-			for _, ve := range validationErrors {
-				errMessages = append(errMessages, ve.Field()+" is invalid: "+ve.Tag())
-			}
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": errMessages})
-		}
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "validation failed"})
-	}
-	//Remove member
-	err = h.Repo.RemoveMemberFromWorkspace(c.Context(), workspaceID, member.MemberID)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to remove member from workspace"})
-	}
-
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "member removed successfully"})
-}
-
-func (h *WorkspaceHandler) RenameWorkSpace(c *fiber.Ctx) error {
-	//Check if workspace id is provided
-	workspaceID := strings.TrimSpace(c.Params("workspaceid"))
-	if workspaceID == "" || workspaceID == "empty" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "workspace id is required"})
-	}
-
-	//Check if user is authenticated
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
-
-	//Get workspace
-	workspace, err := h.Repo.GetWorkspaceByID(c.Context(), workspaceID)
-	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "workspace not found"})
-	}
-
-	//Check if user is owner
-	if workspace.OwnerID != userID {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "you are not authorized to rename this workspace"})
-	}
-
-	//Parse request
-	var req models.RenameWorkSpaceRequest
+	var req models.UpdateWorkspaceRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
 	}
 
-	if err := validate.Struct(req); err != nil {
-		if validationErrors, ok := err.(validator.ValidationErrors); ok {
-			errMessages := make([]string, 0, len(validationErrors))
-			for _, ve := range validationErrors {
-				errMessages = append(errMessages, ve.Field()+" is invalid: "+ve.Tag())
-			}
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": errMessages})
+	log.Println("Received update workspace request:", req)
+
+	// Rename
+	if req.Name != nil {
+		if err := h.Repo.RenameWorkspace(c.Context(), workspaceID, *req.Name); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to rename workspace"})
 		}
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "validation failed"})
 	}
 
-	//Rename workspace
-	err = h.Repo.RenameWorkspace(c.Context(), workspaceID, req.Name)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to rename workspace"})
+	// Add members
+	if req.AddMembers != nil {
+		for _, memberID := range *req.AddMembers {
+			if err := h.Repo.AddMemberToWorkspace(c.Context(), workspaceID, memberID); err != nil {
+				log.Printf("Failed to add member %s: %v", memberID, err)
+			}
+		}
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "workspace renamed successfully"})
+	// Remove members
+	if req.RemoveMembers != nil {
+		for _, memberID := range *req.RemoveMembers {
+			if err := h.Repo.RemoveMemberFromWorkspace(c.Context(), workspaceID, memberID); err != nil {
+				log.Printf("Failed to remove member %s: %v", memberID, err)
+			}
+		}
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "workspace updated successfully"})
 }
