@@ -19,13 +19,6 @@ FROM projects
 WHERE workspace_id = ?
 ORDER BY start_date DESC;
 
--- name: AddMemberToProject :exec
-INSERT OR IGNORE INTO project_members (project_id, user_id)
-VALUES (?, ?);
-
--- name: RemoveMemberFromProject :exec
-DELETE FROM project_members
-WHERE project_id = ? AND user_id = ?;
 
 -- name: ListProjectMembers :many
 SELECT u.*
@@ -33,25 +26,6 @@ FROM users u
 JOIN project_members pm ON u.id = pm.user_id
 WHERE pm.project_id = ?;
 
--- name: UpdateProject :exec
-UPDATE projects
-SET status = ?, priority = ?, start_date = ?, end_date = ?, label = ?
-WHERE id = ?;
-
--- name: UpdateProjectName :exec
-UPDATE projects
-SET name = ?
-WHERE id = ?;
-
--- name: UpdateWorkspaceID :exec
-UPDATE projects
-SET workspace_id = ?
-WHERE id = ?;
-
--- name: UpdateLeaderID :exec
-UPDATE projects
-SET leader_id = ?
-WHERE id = ?;
 
 -- name: GetProjectsByUserID :many
 SELECT p.*
@@ -63,3 +37,21 @@ WHERE pm.user_id = ?;
 SELECT COUNT(*) AS count
 FROM projects
 WHERE id = ?;
+
+-- name: GetOwnerByProjectID :one
+SELECT created_by
+FROM projects
+WHERE id = ?;
+
+-- name: GetLeaderByProjectID :one
+SELECT leader_id
+FROM projects
+WHERE id = ?;
+
+-- name: AddMemberToProject :exec
+INSERT OR IGNORE INTO project_members (project_id, user_id)
+VALUES (?, ?);
+
+-- name: RemoveMemberFromProject :exec
+DELETE FROM project_members
+WHERE project_id = ? AND user_id = ?;
