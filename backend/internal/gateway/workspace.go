@@ -8,9 +8,7 @@ import (
 func SetUpWorkspaceRoutes(api fiber.Router, h *routes.WorkspaceHandler) {
 	api.Get("/workspace", h.GetWorkspacesByUserID)
 	api.Post("/workspace", h.CreateWorkspace)
-	api.Post("/workspace/:workspaceid/members", h.AddMemberToWorkspace)
-	api.Delete("/workspace/:workspaceid/members", h.RemoveMemberFromWorkspace)
-	api.Post("/workspace/:workspaceid/rename", h.RenameWorkSpace)
+	api.Patch("/workspace/:workspaceid", h.UpdateWorkspace)
 	api.Delete("/workspace/:workspaceid", h.DeleteWorkspace)
 
 }
