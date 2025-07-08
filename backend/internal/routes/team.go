@@ -6,6 +6,7 @@ import (
 	"github.com/go-playground/validator"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/nack098/nakumanager/internal/db"
 	models "github.com/nack098/nakumanager/internal/models"
 	"github.com/nack098/nakumanager/internal/repositories"
 )
@@ -67,7 +68,7 @@ func (h *TeamHandler) CreateTeam(c *fiber.Ctx) error {
 	}
 
 	//Add user to team
-	err = h.Repo.AddMemberToTeam(c.Context(), models.AddMemberToTeam{
+	err = h.Repo.AddMemberToTeam(c.Context(), db.AddMemberToTeamParams{
 		TeamID: request.ID,
 		UserID: userID,
 	})
@@ -145,186 +146,26 @@ func (h *TeamHandler) DeleteTeam(c *fiber.Ctx) error {
 	})
 }
 
-func (h *TeamHandler) AddMemberToTeam(c *fiber.Ctx) error {
-	//Check if user is authenticated
+func (h *TeamHandler) UpdateTeam(c *fiber.Ctx) error {
 	userID, ok := c.Locals("userID").(string)
 	if !ok || userID == "" {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
 	}
 
-	teamID := c.Params("id")
+	teamID := strings.TrimSpace(c.Params("id"))
 	if teamID == "" || teamID == "empty" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "team ID is required"})
 	}
 
-	//Parse request
-	var request models.AddMemberToTeam
-	if err := c.BodyParser(&request); err != nil {
+	var req models.UpdateTeamRequest
+	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
-	}
-	request.TeamID = teamID
-
-	owner, err := h.Repo.GetOwnerByTeamID(c.Context(), request.TeamID)
-	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "team not found"})
-	}
-
-	leader, err := h.Repo.GetLeaderByTeamID(c.Context(), request.TeamID)
-	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "team not found"})
-	}
-
-	//Check if user is not owner and leader
-	if owner != userID && leader != userID {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "no permission to remove member from this team"})
-	}
-
-	//Check if member already exists
-	exists, err := h.Repo.IsMemberInTeam(c.Context(), request.TeamID, request.UserID)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to check member"})
-	}
-
-	if exists {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "member already exists in the team"})
-	}
-
-	//Add member
-	err = h.Repo.AddMemberToTeam(c.Context(), request)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to add member to team"})
-	}
-
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "member added to team successfully",
-	})
-}
-
-func (h *TeamHandler) RemoveMemberFromTeam(c *fiber.Ctx) error {
-	//Check if user is authenticated
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
-
-	teamID := c.Params("id")
-	if teamID == "" || teamID == "empty" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "team ID is required"})
-	}
-
-	//Parse request
-	var request models.RemoveMemberFromTeam
-	if err := c.BodyParser(&request); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
-	}
-	request.TeamID = teamID
-
-	owner, err := h.Repo.GetOwnerByTeamID(c.Context(), request.TeamID)
-	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "team not found"})
-	}
-
-	leader, err := h.Repo.GetLeaderByTeamID(c.Context(), request.TeamID)
-	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "team not found"})
-	}
-
-	//Check if user is not owner and leader
-	if owner != userID && leader != userID {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "no permission to remove member from this team"})
-	}
-
-	//Remove member
-	err = h.Repo.RemoveMemberFromTeam(c.Context(), request)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to remove member from team"})
-	}
-
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "member removed from team successfully",
-	})
-}
-
-func (h *TeamHandler) RenameTeam(c *fiber.Ctx) error {
-	//Check if user is authenticated
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
-
-	teamID := c.Params("id")
-	if teamID == "" || teamID == "empty" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "team ID is required"})
-	}
-
-	//Parse request
-	var request models.RenameTeam
-	if err := c.BodyParser(&request); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
-	}
-	request.TeamID = teamID
-
-	//Check if team exists
-	exists, err := h.Repo.IsTeamExists(c.Context(), request.TeamID)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to check team"})
-	}
-
-	if !exists {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "team not found"})
-	}
-
-	//Check if user is owner
-	owner, err := h.Repo.GetOwnerByTeamID(c.Context(), request.TeamID)
-	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "team not found"})
-	}
-
-	leader, err := h.Repo.GetLeaderByTeamID(c.Context(), request.TeamID)
-	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "team not found"})
-	}
-
-	//Check if user is not owner and leader
-	if owner != userID && leader != userID {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "no permission to remove member from this team"})
-	}
-
-	//Rename team
-	err = h.Repo.RenameTeam(c.Context(), request)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to rename team"})
-	}
-
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "team renamed successfully",
-	})
-}
-
-func (h *TeamHandler) SetTeamLeader(c *fiber.Ctx) error {
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
-
-	teamID := c.Params("id")
-	if teamID == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "team ID is required"})
-	}
-
-	var request models.SetTeamLeader
-	if err := c.BodyParser(&request); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
-	}
-	request.TeamID = teamID
-
-	if err := validate.Struct(request); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "validation failed"})
 	}
 
 	ctx := c.Context()
 
-	exists, err := h.Repo.IsTeamExists(ctx, request.TeamID)
+	// Check team existence
+	exists, err := h.Repo.IsTeamExists(ctx, teamID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to check team"})
 	}
@@ -332,19 +173,73 @@ func (h *TeamHandler) SetTeamLeader(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "team not found"})
 	}
 
-	owner, err := h.Repo.GetOwnerByTeamID(ctx, request.TeamID)
+	// Get owner and leader
+	owner, err := h.Repo.GetOwnerByTeamID(ctx, teamID)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "team not found"})
 	}
-	if owner != userID {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "no permission to set team leader"})
+	leader, err := h.Repo.GetLeaderByTeamID(ctx, teamID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "team not found"})
 	}
 
-	if err := h.Repo.SetLeaderToTeam(ctx, request); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to set team leader"})
+	// Rename team
+	if req.Name != nil {
+		if owner != userID && leader != userID {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "no permission to rename team"})
+		}
+		if err := h.Repo.RenameTeam(ctx, db.RenameTeamParams{ID: teamID, Name: *req.Name}); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to rename team"})
+		}
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "team leader set successfully",
-	})
+	// Add members
+	if req.AddMembers != nil {
+		if owner != userID && leader != userID {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "no permission to add members"})
+		}
+		for _, memberID := range *req.AddMembers {
+			exists, err := h.Repo.IsMemberInTeam(ctx, teamID, memberID)
+			if err != nil {
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to check member"})
+			}
+			if exists {
+				continue
+			}
+			if err := h.Repo.AddMemberToTeam(ctx, db.AddMemberToTeamParams{TeamID: teamID, UserID: memberID}); err != nil {
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to add member"})
+			}
+		}
+	}
+
+	// Remove members
+	if req.RemoveMembers != nil {
+		if owner != userID && leader != userID {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "no permission to remove members"})
+		}
+		for _, memberID := range *req.RemoveMembers {
+			if err := h.Repo.RemoveMemberFromTeam(ctx, db.RemoveMemberFromTeamParams{TeamID: teamID, UserID: memberID}); err != nil {
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to remove member"})
+			}
+		}
+	}
+
+	// Set new leader
+	if req.NewLeaderID != nil {
+		if owner != userID {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "only owner can set team leader"})
+		}
+		exists, err := h.Repo.IsMemberInTeam(ctx, teamID, *req.NewLeaderID)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to check if user is member"})
+		}
+		if !exists {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "new leader must be a member of the team"})
+		}
+		if err := h.Repo.SetLeaderToTeam(ctx, db.SetLeaderToTeamParams{ID: teamID, LeaderID: *req.NewLeaderID}); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to set team leader"})
+		}
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "team updated successfully"})
 }
