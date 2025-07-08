@@ -1,39 +1,68 @@
 "use client";
 
-export default function TeamInfo() {
-  const team_members = [
-    ["Admin 1", "Project Manager"],
-    ["Admin 2", "Designer"],
-    ["Member 1", "Frontend"],
-    ["Member 2", "Frontend"],
-    ["Member 3", "Backend"],
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import CustomAvatar from "./Avatar";
+
+export default function WorkspaceInfo() {
+  const owner = "John Doe";
+  const members = [
+    ["John Doe", "Manager"],
+    ["Member 1", "Data Scientist"],
+    ["Member 2", "Designer"],
+    ["KLMNOP", "Frontend"],
+    ["44P", "Backend"],
+    ["jane4321", "Tester"],
   ];
+  const [copied, setCopied] = useState(false);
+  const router = useRouter();
+  const copyInvite = async () => {
+    try {
+      await navigator.clipboard.writeText("Copy successful!");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1000);
+    } catch (error) {
+      alert("Failed to copy!");
+    }
+  };
   return (
-    <div className="flex flex-col p-10 text-white w-1/2">
-      <div className="flex-row text-2xl font-bold mb-4">
-        <span>Team Members</span>
-        <i className="fa-solid fa-gear text-2xl ml-10"></i>
-      </div>
-      <div className="flex flex-row justify-between mb-4">
-        <div className="flex-column items-left justify-start w-100">
-          <ul className="flex-column items-start justify-start h-120 mt-6 text-lg overflow-y-auto">
-            {team_members.map((member, index) => (
-              <li className="pt-4 pb-4" key={index}>
-                {member[0]}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="flex-column items-left justify-start w-100">
-          <ul className="flex-column items-start justify-start h-120 mt-6 text-lg overflow-y-auto">
-            {team_members.map((member, index) => (
-              <li className="pt-4 pb-4" key={index}>
-                {member[1]}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+    <div className="flex flex-col items-start p-6 text-white">
+      <span className="text-xl font-bold mb-4">Team Members</span>
+      {/* <i
+          className="fa-solid fa-gear text-2xl ml-10"
+          onClick={editWorkspace}
+        ></i> */}
+      <button className="px-4 py-2 bg-blue-500 text-sm text-white rounded-md hover:bg-blue-700">
+        <i className="fa-solid fa-plus text-xs mr-2"></i>
+        Add members
+      </button>
+      <table className="w-200 text-left mt-4">
+        <thead>
+          <tr className="h-8 text-xs font-normal text-gray-400 mb-6">
+            <td className="w-1/10"></td>
+            <td className="w-2/5">Name</td>
+            <td className="w-2/5">Role</td>
+            <td className="w-1/10"></td>
+          </tr>
+        </thead>
+        <tbody>
+          {members.map((member, idx) => (
+            <tr
+              key={idx}
+              className="h-12 text-sm hover:bg-gray-800 text-gray-400 transition-colors"
+            >
+              <td>
+                <div className="flex justify-center">
+                  <CustomAvatar name={member[0]} />
+                </div>
+              </td>
+              <td className="text-gray-200 font-medium">{member[0]}</td>
+              <td>{member[1]}</td>
+              <td></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
