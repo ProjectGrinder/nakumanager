@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/nack098/nakumanager/internal/auth"
@@ -12,7 +11,6 @@ import (
 	"github.com/nack098/nakumanager/internal/gateway"
 	"github.com/nack098/nakumanager/internal/repositories"
 	"github.com/nack098/nakumanager/internal/routes"
-	"github.com/nack098/nakumanager/internal/ws"
 )
 
 func LoggerMiddleware(c *fiber.Ctx) error {
@@ -33,12 +31,12 @@ func SetUpRouters(app *fiber.App, conn *sql.DB) {
 	projectRepo := repositories.NewProjectRepository(queries)
 	issueRepo := repositories.NewIssueRepository(queries)
 	viewRepo := repositories.NewViewRepository(conn)
-	wsHandler := ws.NewWSHandler(workspaceRepo, teamRepo, projectRepo, issueRepo, userRepo, viewRepo)
+	// wsHandler := ws.NewWSHandler(workspaceRepo, teamRepo, projectRepo, issueRepo, userRepo, viewRepo)
 
 	authHandler := auth.NewAuthHandler(userRepo)
 	workspaceHandler := routes.NewWorkspaceHandler(workspaceRepo, userRepo)
 	teamHandler := routes.NewTeamHandler(teamRepo, workspaceRepo)
-	projectHandler := routes.NewProjectHandler(projectRepo, teamRepo)
+	projectHandler := routes.NewProjectHandler(conn, projectRepo, teamRepo)
 	issueHandler := routes.NewIssueHandler(issueRepo, teamRepo, projectRepo)
 	viewHandler := routes.NewViewHandler(viewRepo)
 
@@ -63,7 +61,7 @@ func SetUpRouters(app *fiber.App, conn *sql.DB) {
 	gateway.SetUpIssueRoutes(private, issueHandler)
 	gateway.SetUpViewRoutes(private, viewHandler)
 
-	wsGroup := app.Group("/ws", ws.WebSocketMiddleware(authHandler))
-	wsGroup.Get("/", websocket.New(wsHandler.CentralWebSocketHandler))
+	// wsGroup := app.Group("/ws", ws.WebSocketMiddleware(authHandler))
+	// wsGroup.Get("/", websocket.New(wsHandler.CentralWebSocketHandler))
 
 }
