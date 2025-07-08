@@ -47,7 +47,7 @@ export default function Sidebar() {
           Create Team
         </SidebarButton>
         {teams.map((team, index) => (
-          <SidebarButton>{team}</SidebarButton>
+          <SidebarButton key={index}>{team}</SidebarButton>
         ))}
       </div>
       <div className="absolute bottom-0 left-0 w-full p-2 pb-6">
