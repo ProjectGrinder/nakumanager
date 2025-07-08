@@ -2,25 +2,23 @@ package repositories
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/nack098/nakumanager/internal/db"
+	models "github.com/nack098/nakumanager/internal/models"
 )
 
 type ProjectRepository interface {
-	AddMemberToProject(ctx context.Context, data db.AddMemberToProjectParams) error
-	CreateProject(ctx context.Context, data db.CreateProjectParams) error
+	CreateProject(ctx context.Context, data models.CreateProject) error
 	DeleteProject(ctx context.Context, id string) error
 	GetProjectByID(ctx context.Context, id string) (db.Project, error)
 	GetProjectsByUserID(ctx context.Context, userID string) ([]db.Project, error)
 	ListProjectMembers(ctx context.Context, projectID string) ([]db.User, error)
 	ListProjectsByWorkspace(ctx context.Context, workspaceID string) ([]db.ListProjectsByWorkspaceRow, error)
-	RemoveMemberFromProject(ctx context.Context, data db.RemoveMemberFromProjectParams) error
-	UpdateProject(ctx context.Context, data db.UpdateProjectParams) error
 	IsProjectExists(ctx context.Context, projectID string) (bool, error)
-	UpdateProjectName(ctx context.Context, projectID, name string) error
-	UpdateProjectLeader(ctx context.Context, projectID, leaderID string) error
-	UpdateProjectWorkspace(ctx context.Context, projectID, workspaceID string) error
+	GetOwnerByProjectID(ctx context.Context, projectID string) (string, error)
+	GetLeaderByProjectID(ctx context.Context, projectID string) (string, error)
+	AddMemberToProject(ctx context.Context, projectID, userID string) error
+	RemoveMemberFromProject(ctx context.Context, projectID, userID string) error
 }
 
 type projectRepo struct {
@@ -31,12 +29,21 @@ func NewProjectRepository(q *db.Queries) ProjectRepository {
 	return &projectRepo{queries: q}
 }
 
-func (r *projectRepo) AddMemberToProject(ctx context.Context, data db.AddMemberToProjectParams) error {
-	return r.queries.AddMemberToProject(ctx, data)
-}
+func (r *projectRepo) CreateProject(ctx context.Context, data models.CreateProject) error {
 
-func (r *projectRepo) CreateProject(ctx context.Context, data db.CreateProjectParams) error {
-	return r.queries.CreateProject(ctx, data)
+	return r.queries.CreateProject(ctx, db.CreateProjectParams{
+		ID:          data.ID,
+		Name:        data.Name,
+		LeaderID:    data.LeaderID,
+		WorkspaceID: data.WorkspaceID,
+		TeamID:      data.TeamID,
+		Status:      data.Status,
+		Priority:    data.Priority,
+		StartDate:   data.StartDate,
+		EndDate:     data.EndDate,
+		Label:       data.Label,
+		CreatedBy:   data.CreatedBy,
+	})
 }
 
 func (r *projectRepo) DeleteProject(ctx context.Context, id string) error {
@@ -59,14 +66,6 @@ func (r *projectRepo) ListProjectsByWorkspace(ctx context.Context, workspaceID s
 	return r.queries.ListProjectsByWorkspace(ctx, workspaceID)
 }
 
-func (r *projectRepo) RemoveMemberFromProject(ctx context.Context, data db.RemoveMemberFromProjectParams) error {
-	return r.queries.RemoveMemberFromProject(ctx, data)
-}
-
-func (r *projectRepo) UpdateProject(ctx context.Context, data db.UpdateProjectParams) error {
-	return r.queries.UpdateProject(ctx, data)
-}
-
 func (r *projectRepo) IsProjectExists(ctx context.Context, projectID string) (bool, error) {
 	exists, err := r.queries.IsProjectExists(ctx, projectID)
 	if err != nil {
@@ -75,28 +74,31 @@ func (r *projectRepo) IsProjectExists(ctx context.Context, projectID string) (bo
 	return exists > 0, nil
 }
 
-func (r *projectRepo) UpdateProjectName(ctx context.Context, projectID, name string) error {
-	return r.queries.UpdateProjectName(ctx, db.UpdateProjectNameParams{
-		ID:   projectID,
-		Name: name,
-	})
+func (r *projectRepo) GetOwnerByProjectID(ctx context.Context, projectID string) (string, error) {
+	return r.queries.GetOwnerByProjectID(ctx, projectID)
 }
 
-func (r *projectRepo) UpdateProjectLeader(ctx context.Context, projectID, leaderID string) error {
-	leader := sql.NullString{
-		String: leaderID,
-		Valid:  leaderID != "",
+func (r *projectRepo) GetLeaderByProjectID(ctx context.Context, projectID string) (string, error) {
+	result, _ := r.queries.GetLeaderByProjectID(ctx, projectID)
+
+	leaderID, ok := result.(string)
+	if !ok {
+		return "", nil
 	}
+	return leaderID, nil
 
-	return r.queries.UpdateLeaderID(ctx, db.UpdateLeaderIDParams{
-		ID:       projectID,
-		LeaderID: leader,
+}
+
+func (r *projectRepo) AddMemberToProject(ctx context.Context, projectID, userID string) error {
+	return r.queries.AddMemberToProject(ctx, db.AddMemberToProjectParams{
+		ProjectID: projectID,
+		UserID:    userID,
 	})
 }
 
-func (r *projectRepo) UpdateProjectWorkspace(ctx context.Context, projectID, workspaceID string) error {
-	return r.queries.UpdateWorkspaceID(ctx, db.UpdateWorkspaceIDParams{
-		ID:          projectID,
-		WorkspaceID: workspaceID,
+func (r *projectRepo) RemoveMemberFromProject(ctx context.Context, projectID, userID string) error {
+	return r.queries.RemoveMemberFromProject(ctx, db.RemoveMemberFromProjectParams{
+		ProjectID: projectID,
+		UserID:    userID,
 	})
 }
