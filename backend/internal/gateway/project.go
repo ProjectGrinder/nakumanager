@@ -8,5 +8,6 @@ import (
 func SetUpProjectsRoutes(api fiber.Router, h *routes.ProjectHandler) {
 	api.Get("/projects", h.GetProjectsByUserID)
 	api.Post("/projects", h.CreateProject)
+	api.Patch("/projects/:id", h.UpdateProject)
 	api.Delete("/projects/:id", h.DeleteProject)
 }
