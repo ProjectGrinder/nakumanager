@@ -6,14 +6,8 @@ type CreateWorkspace struct {
 	Members []string `json:"members"`
 }
 
-type AddMemberRequest struct {
-	MemberID string `json:"member_id" validate:"required"`
-}
-
-type RemoveMemberRequest struct {
-	MemberID string `json:"member_id" validate:"required"`
-}
-
-type RenameWorkSpaceRequest struct {
-	Name string `json:"name" validate:"required"`
+type UpdateWorkspaceRequest struct {
+	Name          *string   `json:"name"`
+	AddMembers    *[]string `json:"add_members"`
+	RemoveMembers *[]string `json:"remove_members"`
 }
