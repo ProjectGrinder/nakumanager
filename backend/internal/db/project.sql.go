@@ -7,7 +7,6 @@ package db
 
 import (
 	"context"
-	"database/sql"
 )
 
 const addMemberToProject = `-- name: AddMemberToProject :exec
@@ -32,17 +31,17 @@ INSERT INTO projects (
 `
 
 type CreateProjectParams struct {
-	ID          string         `json:"id"`
-	Name        string         `json:"name"`
-	Status      sql.NullString `json:"status"`
-	Priority    sql.NullString `json:"priority"`
-	WorkspaceID string         `json:"workspace_id"`
-	TeamID      string         `json:"team_id"`
-	LeaderID    sql.NullString `json:"leader_id"`
-	StartDate   sql.NullTime   `json:"start_date"`
-	EndDate     sql.NullTime   `json:"end_date"`
-	Label       sql.NullString `json:"label"`
-	CreatedBy   string         `json:"created_by"`
+	ID          string      `json:"id"`
+	Name        string      `json:"name"`
+	Status      interface{} `json:"status"`
+	Priority    interface{} `json:"priority"`
+	WorkspaceID string      `json:"workspace_id"`
+	TeamID      string      `json:"team_id"`
+	LeaderID    interface{} `json:"leader_id"`
+	StartDate   interface{} `json:"start_date"`
+	EndDate     interface{} `json:"end_date"`
+	Label       interface{} `json:"label"`
+	CreatedBy   string      `json:"created_by"`
 }
 
 func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) error {
@@ -69,6 +68,32 @@ DELETE FROM projects WHERE id = ?
 func (q *Queries) DeleteProject(ctx context.Context, id string) error {
 	_, err := q.db.ExecContext(ctx, deleteProject, id)
 	return err
+}
+
+const getLeaderByProjectID = `-- name: GetLeaderByProjectID :one
+SELECT leader_id
+FROM projects
+WHERE id = ?
+`
+
+func (q *Queries) GetLeaderByProjectID(ctx context.Context, id string) (interface{}, error) {
+	row := q.db.QueryRowContext(ctx, getLeaderByProjectID, id)
+	var leader_id interface{}
+	err := row.Scan(&leader_id)
+	return leader_id, err
+}
+
+const getOwnerByProjectID = `-- name: GetOwnerByProjectID :one
+SELECT created_by
+FROM projects
+WHERE id = ?
+`
+
+func (q *Queries) GetOwnerByProjectID(ctx context.Context, id string) (string, error) {
+	row := q.db.QueryRowContext(ctx, getOwnerByProjectID, id)
+	var created_by string
+	err := row.Scan(&created_by)
+	return created_by, err
 }
 
 const getProjectByID = `-- name: GetProjectByID :one
@@ -195,15 +220,15 @@ ORDER BY start_date DESC
 `
 
 type ListProjectsByWorkspaceRow struct {
-	ID          string         `json:"id"`
-	Name        string         `json:"name"`
-	Status      sql.NullString `json:"status"`
-	Priority    sql.NullString `json:"priority"`
-	WorkspaceID string         `json:"workspace_id"`
-	LeaderID    sql.NullString `json:"leader_id"`
-	StartDate   sql.NullTime   `json:"start_date"`
-	EndDate     sql.NullTime   `json:"end_date"`
-	Label       sql.NullString `json:"label"`
+	ID          string      `json:"id"`
+	Name        string      `json:"name"`
+	Status      interface{} `json:"status"`
+	Priority    interface{} `json:"priority"`
+	WorkspaceID string      `json:"workspace_id"`
+	LeaderID    interface{} `json:"leader_id"`
+	StartDate   interface{} `json:"start_date"`
+	EndDate     interface{} `json:"end_date"`
+	Label       interface{} `json:"label"`
 }
 
 func (q *Queries) ListProjectsByWorkspace(ctx context.Context, workspaceID string) ([]ListProjectsByWorkspaceRow, error) {
@@ -251,80 +276,5 @@ type RemoveMemberFromProjectParams struct {
 
 func (q *Queries) RemoveMemberFromProject(ctx context.Context, arg RemoveMemberFromProjectParams) error {
 	_, err := q.db.ExecContext(ctx, removeMemberFromProject, arg.ProjectID, arg.UserID)
-	return err
-}
-
-const updateLeaderID = `-- name: UpdateLeaderID :exec
-UPDATE projects
-SET leader_id = ?
-WHERE id = ?
-`
-
-type UpdateLeaderIDParams struct {
-	LeaderID sql.NullString `json:"leader_id"`
-	ID       string         `json:"id"`
-}
-
-func (q *Queries) UpdateLeaderID(ctx context.Context, arg UpdateLeaderIDParams) error {
-	_, err := q.db.ExecContext(ctx, updateLeaderID, arg.LeaderID, arg.ID)
-	return err
-}
-
-const updateProject = `-- name: UpdateProject :exec
-UPDATE projects
-SET status = ?, priority = ?, start_date = ?, end_date = ?, label = ?
-WHERE id = ?
-`
-
-type UpdateProjectParams struct {
-	Status    sql.NullString `json:"status"`
-	Priority  sql.NullString `json:"priority"`
-	StartDate sql.NullTime   `json:"start_date"`
-	EndDate   sql.NullTime   `json:"end_date"`
-	Label     sql.NullString `json:"label"`
-	ID        string         `json:"id"`
-}
-
-func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) error {
-	_, err := q.db.ExecContext(ctx, updateProject,
-		arg.Status,
-		arg.Priority,
-		arg.StartDate,
-		arg.EndDate,
-		arg.Label,
-		arg.ID,
-	)
-	return err
-}
-
-const updateProjectName = `-- name: UpdateProjectName :exec
-UPDATE projects
-SET name = ?
-WHERE id = ?
-`
-
-type UpdateProjectNameParams struct {
-	Name string `json:"name"`
-	ID   string `json:"id"`
-}
-
-func (q *Queries) UpdateProjectName(ctx context.Context, arg UpdateProjectNameParams) error {
-	_, err := q.db.ExecContext(ctx, updateProjectName, arg.Name, arg.ID)
-	return err
-}
-
-const updateWorkspaceID = `-- name: UpdateWorkspaceID :exec
-UPDATE projects
-SET workspace_id = ?
-WHERE id = ?
-`
-
-type UpdateWorkspaceIDParams struct {
-	WorkspaceID string `json:"workspace_id"`
-	ID          string `json:"id"`
-}
-
-func (q *Queries) UpdateWorkspaceID(ctx context.Context, arg UpdateWorkspaceIDParams) error {
-	_, err := q.db.ExecContext(ctx, updateWorkspaceID, arg.WorkspaceID, arg.ID)
 	return err
 }

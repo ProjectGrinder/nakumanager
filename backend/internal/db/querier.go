@@ -37,7 +37,9 @@ type Querier interface {
 	GetIssuesByProject(ctx context.Context, arg GetIssuesByProjectParams) ([]Issue, error)
 	GetIssuesByStatus(ctx context.Context, arg GetIssuesByStatusParams) ([]Issue, error)
 	GetIssuesByTeamID(ctx context.Context, teamID string) ([]Issue, error)
+	GetLeaderByProjectID(ctx context.Context, id string) (interface{}, error)
 	GetLeaderByTeamID(ctx context.Context, id string) (sql.NullString, error)
+	GetOwnerByProjectID(ctx context.Context, id string) (string, error)
 	GetOwnerByTeamID(ctx context.Context, id string) (string, error)
 	GetProjectByID(ctx context.Context, id string) (Project, error)
 	GetProjectsByUserID(ctx context.Context, userID string) ([]Project, error)
@@ -77,14 +79,10 @@ type Querier interface {
 	SetLeaderToTeam(ctx context.Context, arg SetLeaderToTeamParams) error
 	UpdateEmail(ctx context.Context, arg UpdateEmailParams) error
 	UpdateIssue(ctx context.Context, arg UpdateIssueParams) error
-	UpdateLeaderID(ctx context.Context, arg UpdateLeaderIDParams) error
-	UpdateProject(ctx context.Context, arg UpdateProjectParams) error
-	UpdateProjectName(ctx context.Context, arg UpdateProjectNameParams) error
 	UpdateRoles(ctx context.Context, arg UpdateRolesParams) error
 	UpdateUsername(ctx context.Context, arg UpdateUsernameParams) error
 	UpdateViewGroupBy(ctx context.Context, arg UpdateViewGroupByParams) error
 	UpdateViewName(ctx context.Context, arg UpdateViewNameParams) error
-	UpdateWorkspaceID(ctx context.Context, arg UpdateWorkspaceIDParams) error
 }
 
 var _ Querier = (*Queries)(nil)
