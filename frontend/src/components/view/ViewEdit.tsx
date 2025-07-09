@@ -8,7 +8,7 @@ import {
   TextField,
 } from "@mui/material";
 import { useState } from "react";
-import SelectableItem from "./SelectableItem";
+import IssueSelectItem from "../issue/IssueSelectItem";
 
 export default function ViewEdit() {
   const view = {
@@ -196,7 +196,7 @@ export default function ViewEdit() {
       </div>
       <div className="w-300 overflow-y-auto">
         {issue_list.map((issue, index) => (
-          <SelectableItem
+          <IssueSelectItem
             name={issue[0]}
             status={issue[1]}
             priority={issue[2]}

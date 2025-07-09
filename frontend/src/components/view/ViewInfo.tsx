@@ -1,6 +1,6 @@
 "use client";
 
-import SelectableItem from "./SelectableItem";
+import IssueSelectItem from "../issue/IssueSelectItem";
 
 export default function ViewInfo() {
   const issue_list = [
@@ -34,7 +34,7 @@ export default function ViewInfo() {
       </div>
       <div className="h-150 overflow-y-auto">
         {issue_list.map((issue, index) => (
-          <SelectableItem
+          <IssueSelectItem
             name={issue[0]}
             status={issue[1]}
             priority={issue[2]}

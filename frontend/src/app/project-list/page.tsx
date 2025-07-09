@@ -1,4 +1,4 @@
-import ProjectList from "@/components/ProjectList";
+import ProjectList from "@/components/project/ProjectList";
 import Sidebar from "@/components/Sidebar";
 
 export default function ProjectListPage() {

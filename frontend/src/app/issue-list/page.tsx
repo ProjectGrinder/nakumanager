@@ -1,4 +1,4 @@
-import IssueList from "@/components/IssueList";
+import IssueList from "@/components/issue/IssueList";
 import Sidebar from "@/components/Sidebar";
 
 export default function IssueListPage() {

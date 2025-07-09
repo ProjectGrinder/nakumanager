@@ -7,8 +7,8 @@ import {
   MenuItem,
   TextField,
 } from "@mui/material";
-import PriorityIcon from "./PriorityIcon";
-import StatusIcon from "./StatusIcon";
+import PriorityIcon from "../PriorityIcon";
+import StatusIcon from "../StatusIcon";
 import { useState } from "react";
 
 export default function IssueEdit() {

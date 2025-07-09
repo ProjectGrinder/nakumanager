@@ -1,42 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { users } from "../Database";
+import { users } from "../../Database";
 import { useState } from "react";
-export default function Register() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [email, setEmail] = useState("");
 
-  const handleRegister = () => {
-    if (username == "" || password == "" || email == "") {
+export default function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleLogin = () => {
+    if (email == "" || password == "") {
       alert("Please fill in every field");
       return;
     }
-    const user = users.find((user) => user[0] === username);
-    if (user) {
-      alert("Username already taken");
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      alert("Please enter a valid email address");
-      return;
-    }
-    const oldEmail = users.find((oldEmail) => oldEmail[1] === email);
-    if (oldEmail) {
-      alert("Email already registered");
-      return;
-    }
-
-    if (password.length < 8) {
-      alert("Password must be at least 8 characters");
-      return;
-    }
-
-    // users.push([username, email, password]);
-    console.log("Registration complete!");
+    const user = users.find((user) => user[0] === email);
+    if (user) console.log("Login Successful");
+    else alert("Email or password is incorrect");
   };
 
   return (
@@ -48,24 +27,13 @@ export default function Register() {
             The management software that grows with your need
           </p>
         </div>
-        <div className="flex flex-col w-full items-center mb-15">
-          <span className="text-2xl font-semibold text-gray-200">Register</span>
-          <div className="w-full m-2">
-            <p className="text-sm pb-2 text-gray-200">Username</p>
-            <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full bg-gray-200 border-2 border-gray-400 text-gray-700 px-4 py-2 text-sm rounded-xl outline-none"
-            />
-          </div>
-
+        <div className="flex flex-col w-full items-center mb-30">
+          <span className="text-2xl font-semibold text-gray-200">Login</span>
           <div className="w-full m-2">
             <p className="text-sm pb-2 text-gray-200">Email</p>
             <input
               id="email"
-              type="email"
+              type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-gray-200 border-2 border-gray-400 text-gray-700 px-4 py-2 text-sm rounded-xl outline-none"
@@ -85,16 +53,16 @@ export default function Register() {
 
           <button
             id="btn-check"
-            onClick={handleRegister}
+            onClick={handleLogin}
             className="mt-6 border-box px-10 py-4 bg-blue-500 text-lg text-white rounded-xl hover:bg-blue-700"
           >
             Confirm
           </button>
         </div>
         <p className="text-color-100 font-normal text-sm">
-          Back to
-          <Link href="/" className="ml-2 underline">
-            Log in
+          Not registered yet?
+          <Link href="/register" className="ml-2 underline">
+            Register here
           </Link>
         </p>
       </div>
