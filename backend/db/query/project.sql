@@ -28,10 +28,10 @@ WHERE pm.project_id = ?;
 
 
 -- name: GetProjectsByUserID :many
-SELECT p.*
+SELECT DISTINCT p.*
 FROM projects p
-JOIN project_members pm ON p.id = pm.project_id
-WHERE pm.user_id = ?;
+LEFT JOIN project_members pm ON p.id = pm.project_id
+WHERE pm.user_id = ? OR p.created_by = ?;
 
 -- name: IsProjectExists :one
 SELECT COUNT(*) AS count
