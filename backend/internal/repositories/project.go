@@ -55,7 +55,7 @@ func (r *projectRepo) GetProjectByID(ctx context.Context, id string) (db.Project
 }
 
 func (r *projectRepo) GetProjectsByUserID(ctx context.Context, userID string) ([]db.Project, error) {
-	return r.queries.GetProjectsByUserID(ctx, userID)
+	return r.queries.GetProjectsByUserID(ctx, db.GetProjectsByUserIDParams{UserID: userID, CreatedBy: userID})
 }
 
 func (r *projectRepo) ListProjectMembers(ctx context.Context, projectID string) ([]db.User, error) {

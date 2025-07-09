@@ -3,8 +3,6 @@ package repositories
 import (
 	"context"
 	"database/sql"
-	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/nack098/nakumanager/internal/db"
@@ -13,21 +11,20 @@ import (
 type ViewRepository interface {
 	AddGroupByToView(ctx context.Context, data db.AddGroupByToViewParams) error
 	AddIssueToView(ctx context.Context, data db.AddIssueToViewParams) error
+	AddIssueToViewTx(ctx context.Context, tx *sql.Tx, params db.AddIssueToViewParams) error
 	CreateView(ctx context.Context, data db.CreateViewParams) error
 	DeleteView(ctx context.Context, id string) error
 	GetViewByID(ctx context.Context, id string) ([]db.View, error)
 	ListGroupByViewID(ctx context.Context, viewID string) ([]string, error)
 	ListIssuesByViewID(ctx context.Context, viewID string) ([]db.Issue, error)
 	ListViewsByUser(ctx context.Context, userID string) ([]db.View, error)
-	UpdateViewName(ctx context.Context,id string, name string) error
+	UpdateViewName(ctx context.Context, id string, name string) error
 	RemoveGroupByFromView(ctx context.Context, id string) error
 	RemoveIssueFromView(ctx context.Context, id string) error
-	ListIssuesByGroupFilters(ctx context.Context, teamID string, filters map[string]string) ([]db.Issue, error)
-	GetGroupedIssues(
-		ctx context.Context,
-		teamID string,
-		groupBy []string,
-	) ([]map[string]interface{}, error)
+	ListViewByTeamID(ctx context.Context, teamID string) ([]db.View, error)
+	GetViewsByGroupBys(ctx context.Context, groupBys []string) ([]db.View, error)
+	UpdateViewTeamID(ctx context.Context, id string, teamID string) error
+	GetTeamIDByViewID(ctx context.Context, id string) (string, error)
 }
 
 type viewRepo struct {
@@ -48,6 +45,11 @@ func (r *viewRepo) AddGroupByToView(ctx context.Context, data db.AddGroupByToVie
 
 func (r *viewRepo) AddIssueToView(ctx context.Context, data db.AddIssueToViewParams) error {
 	return r.db.AddIssueToView(ctx, data)
+}
+
+func (r *viewRepo) AddIssueToViewTx(ctx context.Context, tx *sql.Tx, params db.AddIssueToViewParams) error {
+	q := db.New(tx) // ใช้ sqlc กับ transaction นี้
+	return q.AddIssueToView(ctx, params)
 }
 
 func (r *viewRepo) CreateView(ctx context.Context, data db.CreateViewParams) error {
@@ -74,7 +76,7 @@ func (r *viewRepo) ListViewsByUser(ctx context.Context, userID string) ([]db.Vie
 	return r.db.ListViewsByUser(ctx, userID)
 }
 
-func (r *viewRepo) UpdateViewName(ctx context.Context,id string, name string) error {
+func (r *viewRepo) UpdateViewName(ctx context.Context, id string, name string) error {
 	return r.db.UpdateViewName(ctx, db.UpdateViewNameParams{
 		ID:   id,
 		Name: name,
@@ -89,83 +91,25 @@ func (r *viewRepo) RemoveIssueFromView(ctx context.Context, id string) error {
 	return r.db.RemoveIssueFromView(ctx, id)
 }
 
-type GroupedIssue struct {
-	Group1     sql.NullString
-	Group2     sql.NullString
-	IssueCount int
+func (r *viewRepo) ListViewByTeamID(ctx context.Context, teamID string) ([]db.View, error) {
+	return r.db.ListViewByTeamID(ctx, teamID)
 }
 
-func (r *viewRepo) GetGroupedIssues(
-	ctx context.Context,
-	teamID string,
-	groupBy []string,
-) ([]map[string]interface{}, error) {
-	// Allow only specific fields
-	validCols := map[string]bool{
-		"status": true, "priority": true, "project_id": true,
-		"label": true, "assignee": true, "type": true, "severity": true,
+func (r *viewRepo) GetViewsByGroupBys(ctx context.Context, groupBys []string) ([]db.View, error) {
+	query := `
+    SELECT v.id, v.name, v.created_by, v.team_id
+	FROM views v
+	JOIN view_group_bys vg ON v.id = vg.view_id
+	WHERE vg.group_by IN (?` + strings.Repeat(",?", len(groupBys)-1) + `)
+	GROUP BY v.id
+	HAVING COUNT(DISTINCT vg.group_by) = ?;
+    `
+
+	args := make([]interface{}, len(groupBys)+1)
+	for i, g := range groupBys {
+		args[i] = g
 	}
-
-	if len(groupBy) == 0 || len(groupBy) > 2 {
-		return nil, fmt.Errorf("groupBy must be 1 or 2 fields")
-	}
-
-	for _, col := range groupBy {
-		if !validCols[col] {
-			return nil, fmt.Errorf("invalid groupBy column: %s", col)
-		}
-	}
-
-	cols := strings.Join(groupBy, ", ")
-	query := fmt.Sprintf(`
-		SELECT %s, COUNT(*) as issue_count
-		FROM issues
-		WHERE team_id = ?
-		GROUP BY %s
-	`, cols, cols)
-
-	rows, err := r.rawDb.QueryContext(ctx, query, teamID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var results []map[string]interface{}
-	for rows.Next() {
-		values := make([]interface{}, len(groupBy)+1)
-		for i := range values {
-			var v sql.NullString
-			values[i] = &v
-		}
-
-		if err := rows.Scan(values...); err != nil {
-			return nil, err
-		}
-
-		row := map[string]interface{}{}
-		for i, col := range groupBy {
-			row[col] = *(values[i].(*sql.NullString))
-		}
-		row["count"] = *(values[len(groupBy)].(*sql.NullString)) // แต่จริง ๆ เป็น int
-
-		// convert count เป็น int
-		if countVal, ok := row["count"].(sql.NullString); ok && countVal.Valid {
-			row["count"], _ = strconv.Atoi(countVal.String)
-		}
-
-		results = append(results, row)
-	}
-	return results, nil
-}
-
-func (r *viewRepo) ListIssuesByGroupFilters(ctx context.Context, teamID string, filters map[string]string) ([]db.Issue, error) {
-	query := `SELECT * FROM issues WHERE team_id = ?`
-	args := []interface{}{teamID}
-
-	for col, val := range filters {
-		query += fmt.Sprintf(" AND %s = ?", col)
-		args = append(args, val)
-	}
+	args[len(groupBys)] = len(groupBys)
 
 	rows, err := r.rawDb.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -173,27 +117,24 @@ func (r *viewRepo) ListIssuesByGroupFilters(ctx context.Context, teamID string, 
 	}
 	defer rows.Close()
 
-	var issues []db.Issue
+	var views []db.View
 	for rows.Next() {
-		var issue db.Issue
-		if err := rows.Scan(
-			&issue.ID,
-			&issue.Title,
-			&issue.Content,
-			&issue.Priority,
-			&issue.Status,
-			&issue.Assignee,
-			&issue.ProjectID,
-			&issue.TeamID,
-			&issue.StartDate,
-			&issue.EndDate,
-			&issue.Label,
-			&issue.OwnerID,
-		); err != nil {
+		var v db.View
+		if err := rows.Scan(&v.ID, &v.Name, &v.CreatedBy, &v.TeamID); err != nil {
 			return nil, err
 		}
-		issues = append(issues, issue)
+		views = append(views, v)
 	}
+	return views, nil
+}
 
-	return issues, nil
+func (r *viewRepo) UpdateViewTeamID(ctx context.Context, id string, teamID string) error {
+	return r.db.UpdateViewTeamID(ctx, db.UpdateViewTeamIDParams{
+		ID:     id,
+		TeamID: teamID,
+	})
+}
+
+func (r *viewRepo) GetTeamIDByViewID(ctx context.Context, id string) (string, error) {
+	return r.db.GetTeamIDByViewID(ctx, id)
 }

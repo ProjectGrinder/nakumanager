@@ -122,14 +122,19 @@ func (q *Queries) GetProjectByID(ctx context.Context, id string) (Project, error
 }
 
 const getProjectsByUserID = `-- name: GetProjectsByUserID :many
-SELECT p.id, p.name, p.status, p.priority, p.workspace_id, p.team_id, p.leader_id, p.start_date, p.end_date, p.label, p.created_by
+SELECT DISTINCT p.id, p.name, p.status, p.priority, p.workspace_id, p.team_id, p.leader_id, p.start_date, p.end_date, p.label, p.created_by
 FROM projects p
-JOIN project_members pm ON p.id = pm.project_id
-WHERE pm.user_id = ?
+LEFT JOIN project_members pm ON p.id = pm.project_id
+WHERE pm.user_id = ? OR p.created_by = ?
 `
 
-func (q *Queries) GetProjectsByUserID(ctx context.Context, userID string) ([]Project, error) {
-	rows, err := q.db.QueryContext(ctx, getProjectsByUserID, userID)
+type GetProjectsByUserIDParams struct {
+	UserID    string `json:"user_id"`
+	CreatedBy string `json:"created_by"`
+}
+
+func (q *Queries) GetProjectsByUserID(ctx context.Context, arg GetProjectsByUserIDParams) ([]Project, error) {
+	rows, err := q.db.QueryContext(ctx, getProjectsByUserID, arg.UserID, arg.CreatedBy)
 	if err != nil {
 		return nil, err
 	}

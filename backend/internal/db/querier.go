@@ -29,7 +29,7 @@ type Querier interface {
 	DeleteView(ctx context.Context, id string) error
 	DeleteWorkspace(ctx context.Context, id string) error
 	GetIssueByID(ctx context.Context, id string) (Issue, error)
-	GetIssueByUserID(ctx context.Context, userID string) ([]Issue, error)
+	GetIssueByUserID(ctx context.Context, arg GetIssueByUserIDParams) ([]Issue, error)
 	GetIssuesByAssignee(ctx context.Context, arg GetIssuesByAssigneeParams) ([]Issue, error)
 	GetIssuesByEndDate(ctx context.Context, arg GetIssuesByEndDateParams) ([]Issue, error)
 	GetIssuesByLabel(ctx context.Context, arg GetIssuesByLabelParams) ([]Issue, error)
@@ -42,8 +42,9 @@ type Querier interface {
 	GetOwnerByProjectID(ctx context.Context, id string) (string, error)
 	GetOwnerByTeamID(ctx context.Context, id string) (string, error)
 	GetProjectByID(ctx context.Context, id string) (Project, error)
-	GetProjectsByUserID(ctx context.Context, userID string) ([]Project, error)
+	GetProjectsByUserID(ctx context.Context, arg GetProjectsByUserIDParams) ([]Project, error)
 	GetTeamByID(ctx context.Context, id string) (Team, error)
+	GetTeamIDByViewID(ctx context.Context, id string) (string, error)
 	GetTeamsByUserID(ctx context.Context, userID string) ([]Team, error)
 	GetUserByEmailWithPassword(ctx context.Context, email string) (GetUserByEmailWithPasswordRow, error)
 	GetUserByEmailWithoutPassword(ctx context.Context, email string) (GetUserByEmailWithoutPasswordRow, error)
@@ -65,6 +66,7 @@ type Querier interface {
 	ListTeamMembers(ctx context.Context, teamID string) ([]ListTeamMembersRow, error)
 	ListTeams(ctx context.Context) ([]Team, error)
 	ListUsers(ctx context.Context) ([]ListUsersRow, error)
+	ListViewByTeamID(ctx context.Context, teamID string) ([]View, error)
 	ListViewsByUser(ctx context.Context, createdBy string) ([]View, error)
 	ListWorkspaceMembers(ctx context.Context, workspaceID string) ([]User, error)
 	ListWorkspacesWithMembersByUserID(ctx context.Context, arg ListWorkspacesWithMembersByUserIDParams) ([]ListWorkspacesWithMembersByUserIDRow, error)
@@ -78,11 +80,11 @@ type Querier interface {
 	RenameWorkspace(ctx context.Context, arg RenameWorkspaceParams) error
 	SetLeaderToTeam(ctx context.Context, arg SetLeaderToTeamParams) error
 	UpdateEmail(ctx context.Context, arg UpdateEmailParams) error
-	UpdateIssue(ctx context.Context, arg UpdateIssueParams) error
 	UpdateRoles(ctx context.Context, arg UpdateRolesParams) error
 	UpdateUsername(ctx context.Context, arg UpdateUsernameParams) error
 	UpdateViewGroupBy(ctx context.Context, arg UpdateViewGroupByParams) error
 	UpdateViewName(ctx context.Context, arg UpdateViewNameParams) error
+	UpdateViewTeamID(ctx context.Context, arg UpdateViewTeamIDParams) error
 }
 
 var _ Querier = (*Queries)(nil)

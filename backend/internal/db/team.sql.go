@@ -162,7 +162,7 @@ func (q *Queries) IsTeamExists(ctx context.Context, id string) (int64, error) {
 }
 
 const listIssuesByUserID = `-- name: ListIssuesByUserID :many
-SELECT i.id, i.title, i.status, i.priority, i.project_id, i.assignee
+SELECT i.id, i.title, i.status, i.priority, i.project_id
 FROM issues i
 JOIN project_members pm ON i.project_id = pm.project_id
 WHERE pm.user_id = ?
@@ -174,7 +174,6 @@ type ListIssuesByUserIDRow struct {
 	Status    string         `json:"status"`
 	Priority  sql.NullString `json:"priority"`
 	ProjectID sql.NullString `json:"project_id"`
-	Assignee  sql.NullString `json:"assignee"`
 }
 
 func (q *Queries) ListIssuesByUserID(ctx context.Context, userID string) ([]ListIssuesByUserIDRow, error) {
@@ -192,7 +191,6 @@ func (q *Queries) ListIssuesByUserID(ctx context.Context, userID string) ([]List
 			&i.Status,
 			&i.Priority,
 			&i.ProjectID,
-			&i.Assignee,
 		); err != nil {
 			return nil, err
 		}

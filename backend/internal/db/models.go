@@ -14,7 +14,6 @@ type Issue struct {
 	Content   sql.NullString `json:"content"`
 	Priority  sql.NullString `json:"priority"`
 	Status    string         `json:"status"`
-	Assignee  sql.NullString `json:"assignee"`
 	ProjectID sql.NullString `json:"project_id"`
 	TeamID    string         `json:"team_id"`
 	StartDate sql.NullTime   `json:"start_date"`

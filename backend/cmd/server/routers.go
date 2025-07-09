@@ -37,8 +37,8 @@ func SetUpRouters(app *fiber.App, conn *sql.DB) {
 	workspaceHandler := routes.NewWorkspaceHandler(workspaceRepo, userRepo)
 	teamHandler := routes.NewTeamHandler(teamRepo, workspaceRepo)
 	projectHandler := routes.NewProjectHandler(conn, projectRepo, teamRepo)
-	issueHandler := routes.NewIssueHandler(issueRepo, teamRepo, projectRepo)
-	viewHandler := routes.NewViewHandler(viewRepo)
+	issueHandler := routes.NewIssueHandler(conn, issueRepo, teamRepo, projectRepo)
+	viewHandler := routes.NewViewHandler(conn, viewRepo)
 
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: "http://localhost:8080",

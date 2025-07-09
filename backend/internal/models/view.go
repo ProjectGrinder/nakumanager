@@ -9,11 +9,10 @@ type CreateView struct {
 }
 
 type ViewGroupBy struct {
-	ViewID string `json:"view_id"`
+	GroupBys []string `json:"group_bys"`
 }
 
-type EditView struct {
-	ID       string   `json:"view_id" validate:"required"`
+type UpdateViewRequest struct {
 	TeamID   string   `json:"team_id"`
 	Name     string   `json:"name"`
 	GroupBys []string `json:"group_bys"`

@@ -49,7 +49,7 @@ FROM teams
 WHERE id = ?;
 
 -- name: ListIssuesByUserID :many
-SELECT i.id, i.title, i.status, i.priority, i.project_id, i.assignee
+SELECT i.id, i.title, i.status, i.priority, i.project_id
 FROM issues i
 JOIN project_members pm ON i.project_id = pm.project_id
 WHERE pm.user_id = ?;

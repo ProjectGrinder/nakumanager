@@ -2,6 +2,7 @@ package routes
 
 import (
 	"database/sql"
+	"fmt"
 	"strings"
 	"time"
 
@@ -126,4 +127,31 @@ func buildUpdateIssueQuery(i models.UpdateIssueRequest) (string, []interface{}) 
 	args = append(args, i.ID)
 
 	return query, args
+}
+
+func buildGroupByQuery(table string, groupBys []string) (string, error) {
+	validCols := map[string]bool{
+		"status": true, "priority": true, "project_id": true,
+		"label": true, "assignee": true, "team_id": true, "end_date": true,
+	}
+	if len(groupBys) == 0 {
+		return "", fmt.Errorf("no group_by fields provided")
+	}
+	for _, col := range groupBys {
+		if !validCols[col] {
+			return "", fmt.Errorf("invalid group_by column: %s", col)
+		}
+	}
+
+	var conditions []string
+	for _, col := range groupBys {
+		conditions = append(conditions, fmt.Sprintf("%s IS NOT NULL", col))
+	}
+
+	query := fmt.Sprintf(`
+		SELECT id
+		FROM %s
+		WHERE team_id = ? AND %s
+	`, table, strings.Join(conditions, " AND "))
+	return query, nil
 }

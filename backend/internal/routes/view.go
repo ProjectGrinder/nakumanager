@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"strings"
 
 	models "github.com/nack098/nakumanager/internal/models"
 
@@ -15,11 +14,14 @@ import (
 )
 
 type ViewHandler struct {
+	DB   *sql.DB
 	Repo repositories.ViewRepository
 }
 
-func NewViewHandler(repo repositories.ViewRepository) *ViewHandler {
-	return &ViewHandler{Repo: repo}
+func NewViewHandler(db *sql.DB, repo repositories.ViewRepository) *ViewHandler {
+	return &ViewHandler{
+		DB:   db,
+		Repo: repo}
 }
 
 func safeString(ns sql.NullString) string {
@@ -29,109 +31,96 @@ func safeString(ns sql.NullString) string {
 	return "null"
 }
 
+func isSafeColumn(col string) bool {
+	allowed := map[string]bool{
+		"status":     true,
+		"priority":   true,
+		"assignee":   true,
+		"project_id": true,
+		"label":      true,
+		"team_id":    true,
+		"end_date":   true,
+	}
+	return allowed[col]
+}
 
 func (h *ViewHandler) CreateView(c *fiber.Ctx) error {
-	var req models.ViewCreateRequest
+	var req models.CreateView
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
-		})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
-
 	if req.Name == "" || req.TeamID == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "name and team_id are required",
-		})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "name and team_id are required"})
 	}
 
 	userID, ok := c.Locals("userID").(string)
 	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Unauthorized",
-		})
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
 
 	req.ID = uuid.New().String()
+	ctx := c.Context()
 
-
-	err := h.Repo.CreateView(c.Context(), db.CreateViewParams{
+	if err := h.Repo.CreateView(ctx, db.CreateViewParams{
 		ID:        req.ID,
 		Name:      req.Name,
 		CreatedBy: userID,
 		TeamID:    req.TeamID,
-	})
-	if err != nil {
+	}); err != nil {
 		log.Printf("Failed to create view: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to create view",
-		})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create view"})
 	}
 
 	validGroupBys := map[string]bool{
-		"status": true, "assignee": true, "priority": true,
-		"project_id": true, "label": true, "team_id": true, "end_date": true,
+		"status": true, "priority": true, "project_id": true,
+		"label": true, "assignee": true, "team_id": true, "end_date": true,
 	}
-
 	for _, g := range req.GroupBys {
 		if !validGroupBys[g] {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"error": fmt.Sprintf("Invalid group_by value: %s", g),
 			})
 		}
-	}
-
-	for _, g := range req.GroupBys {
-		err := h.Repo.AddGroupByToView(c.Context(), db.AddGroupByToViewParams{
+		if err := h.Repo.AddGroupByToView(ctx, db.AddGroupByToViewParams{
 			ViewID:  req.ID,
 			GroupBy: g,
-		})
-		if err != nil {
-			log.Printf("Failed to add group_by: %s -> %v", g, err)
+		}); err != nil {
+			log.Printf("Failed to add group_by %s: %v", g, err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": fmt.Sprintf("Failed to add group_by: %s", g),
 			})
 		}
 	}
 
-	groupedData, err := h.Repo.GetGroupedIssues(c.Context(), req.TeamID, req.GroupBys)
+	query, err := buildGroupByQuery("issues", req.GroupBys)
 	if err != nil {
-		log.Printf("Failed to group issues by %+v: %v", req.GroupBys, err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to group issues",
-		})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	rows, err := h.DB.QueryContext(ctx, query, req.TeamID)
+	if err != nil {
+		log.Printf("Failed to query grouped issues: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to group issues"})
+	}
+	defer rows.Close()
+
 	issueSet := make(map[string]struct{})
-
-	for _, row := range groupedData {
-		filter := make(map[string]string)
-		for _, col := range req.GroupBys {
-			if val, ok := row[col]; ok {
-				if v, ok := val.(sql.NullString); ok && v.Valid {
-					filter[col] = v.String
-				}
-			}
+	for rows.Next() {
+		var issueID string
+		if err := rows.Scan(&issueID); err == nil {
+			issueSet[issueID] = struct{}{}
 		}
-
-		matchingIssues, err := h.Repo.ListIssuesByGroupFilters(c.Context(), req.TeamID, filter)
-		if err != nil {
-			log.Printf("Failed to list issues by group %+v: %v", filter, err)
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": fmt.Sprintf("Failed to find issues by group %v", filter),
-			})
-		}
-
-		for _, issue := range matchingIssues {
-			issueSet[issue.ID] = struct{}{}
-		}
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("Row error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to read grouped issues"})
 	}
 
 	for issueID := range issueSet {
-		err := h.Repo.AddIssueToView(c.Context(), db.AddIssueToViewParams{
+		if err := h.Repo.AddIssueToView(ctx, db.AddIssueToViewParams{
 			ViewID:  req.ID,
 			IssueID: issueID,
-		})
-		if err != nil {
+		}); err != nil {
 			log.Printf("Failed to add issue %s to view: %v", issueID, err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": fmt.Sprintf("Failed to add issue %s to view", issueID),
@@ -146,78 +135,54 @@ func (h *ViewHandler) CreateView(c *fiber.Ctx) error {
 }
 
 func (h *ViewHandler) GetViewsByGroupBy(c *fiber.Ctx) error {
-	var viewGroupBy models.ViewGroupBy
-	if err := c.BodyParser(&viewGroupBy); err != nil || viewGroupBy.ViewID == "" {
+	var req models.ViewGroupBy
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	if len(req.GroupBys) == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "group_by is required"})
+	}
+
+	userID, ok := c.Locals("userID").(string)
+	if !ok || userID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
+	}
+
+	views, err := h.Repo.GetViewsByGroupBys(c.Context(), req.GroupBys)
+	if err != nil {
+		log.Printf("Failed to get views by group_by: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to get views by group_by"})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Success", "views": views})
+}
+
+func (h *ViewHandler) GetViewByTeamID(c *fiber.Ctx) error {
+	log.Println("GetViewByTeamID")
+	teamID := c.Params("id")
+	if teamID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body or missing view_id",
+			"error": "Invalid request body or missing team_id",
 		})
 	}
 
-	groupByCols, err := h.Repo.ListGroupByViewID(c.UserContext(), viewGroupBy.ViewID)
+	userID, ok := c.Locals("userID").(string)
+	if !ok || userID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
+	}
+
+	views, err := h.Repo.ListViewByTeamID(c.Context(), teamID)
 	if err != nil {
-		log.Printf("Failed to get group_by: %v", err)
+		log.Printf("Failed to get views by user ID: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to get group_by settings",
+			"error": "Failed to get views",
 		})
 	}
 
-	issues, err := h.Repo.ListIssuesByViewID(c.UserContext(), viewGroupBy.ViewID)
-	if err != nil {
-		log.Printf("Failed to get issues: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to get issues",
-		})
-	}
-
-	for _, issue := range issues {
-		log.Printf("[DEBUG] Issue ID = %s, Status = %s, Priority = %+v, ProjectID = %+v", issue.ID, issue.Status, issue.Priority, issue.ProjectID)
-	}
-
-	groupMap := make(map[string][]db.Issue)
-	for _, issue := range issues {
-		var keyParts []string
-		for _, col := range groupByCols {
-			switch col {
-			case "status":
-				keyParts = append(keyParts, issue.Status)
-			case "priority":
-				keyParts = append(keyParts, safeString(issue.Priority))
-			case "project_id":
-				keyParts = append(keyParts, safeString(issue.ProjectID))
-			case "assignee":
-				keyParts = append(keyParts, safeString(issue.Assignee))
-			case "label":
-				keyParts = append(keyParts, safeString(issue.Label))
-			case "end_date":
-				if !issue.EndDate.Time.IsZero() {
-					keyParts = append(keyParts, issue.EndDate.Time.Format("2006-01-02"))
-				} else {
-					keyParts = append(keyParts, "null")
-				}
-			default:
-				keyParts = append(keyParts, "unknown")
-			}
-		}
-
-		groupKey := strings.Join(keyParts, "|")
-
-		groupMap[groupKey] = append(groupMap[groupKey], issue)
-	}
-
-	var results []map[string]interface{}
-	for key, issues := range groupMap {
-		group := map[string]interface{}{}
-		keyParts := strings.Split(key, "|")
-		for i, col := range groupByCols {
-			group[col] = keyParts[i]
-		}
-		group["issues"] = issues
-		results = append(results, group)
-	}
-
-	log.Printf("[DEBUG] Total groups: %d", len(results))
-
-	return c.Status(fiber.StatusOK).JSON(results)
+	return c.Status(fiber.StatusOK).JSON(views)
 }
 
 func (h *ViewHandler) DeleteView(c *fiber.Ctx) error {
@@ -251,12 +216,6 @@ func (h *ViewHandler) DeleteView(c *fiber.Ctx) error {
 		})
 	}
 
-	if view[0].CreatedBy != userID {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "You don't have permission to delete this view",
-		})
-	}
-
 	err = h.Repo.DeleteView(c.Context(), viewID)
 	if err != nil {
 		log.Printf("Failed to delete view: %v", err)
@@ -268,4 +227,152 @@ func (h *ViewHandler) DeleteView(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "View deleted successfully",
 	})
+}
+
+func (h *ViewHandler) UpdateView(c *fiber.Ctx) error {
+	viewID := c.Params("id")
+	if viewID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body or missing view_id",
+		})
+	}
+
+	var req models.UpdateViewRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	teamID, err := h.Repo.GetTeamIDByViewID(c.Context(), viewID)
+	if err != nil {
+		log.Printf("Failed to get team_id: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to get team_id"})
+	}
+
+	userID, ok := c.Locals("userID").(string)
+	if !ok || userID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
+	}
+
+	log.Printf("UserID: %s is updating ViewID: %s", userID, viewID)
+
+	view, err := h.Repo.GetViewByID(c.Context(), viewID)
+	if err != nil {
+		log.Printf("Failed to get view by ID: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to get view"})
+	}
+	if len(view) == 0 {
+		log.Printf("View not found: %s", viewID)
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "View not found"})
+	}
+
+	ctx := c.Context()
+	tx, err := h.DB.BeginTx(ctx, nil)
+	if err != nil {
+		log.Printf("Failed to begin transaction: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to begin transaction"})
+	}
+
+	defer func() {
+		if err != nil {
+			log.Println("Rolling back transaction...")
+			tx.Rollback()
+		} else {
+			log.Println("Committing transaction...")
+			tx.Commit()
+		}
+	}()
+
+	if req.Name != "" {
+		log.Printf("Updating view name to: %s", req.Name)
+		err = h.Repo.UpdateViewName(ctx, viewID, req.Name)
+		if err != nil {
+			log.Printf("Failed to update view name: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update view name"})
+		}
+	}
+
+	if req.TeamID != "" {
+		log.Printf("Updating view team_id to: %s", req.TeamID)
+		err = h.Repo.UpdateViewTeamID(ctx, viewID, req.TeamID)
+		if err != nil {
+			log.Printf("Failed to update view team_id: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update view team_id"})
+		}
+	}
+
+	if req.GroupBys != nil {
+		log.Printf("Updating group_bys to: %v", req.GroupBys)
+
+		if err = h.Repo.RemoveGroupByFromView(ctx, viewID); err != nil {
+			log.Printf("Failed to remove old group_bys: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to remove old group_bys"})
+		}
+		if err = h.Repo.RemoveIssueFromView(ctx, viewID); err != nil {
+			log.Printf("Failed to remove old issues: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to remove old issues"})
+		}
+
+		for _, gb := range req.GroupBys {
+			log.Printf("Adding group_by: %s", gb)
+			err = h.Repo.AddGroupByToView(ctx, db.AddGroupByToViewParams{
+				ViewID:  viewID,
+				GroupBy: gb,
+			})
+			if err != nil {
+				log.Printf("Failed to add group_by %s: %v", gb, err)
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to add group_by"})
+			}
+		}
+
+		query, err := buildGroupByQuery("issues", req.GroupBys)
+		if err != nil {
+			log.Printf("Failed to build query: %v", err)
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
+
+		log.Printf("Using team_id: %s", teamID)
+
+		rows, err := tx.QueryContext(ctx, query, teamID)
+		if err != nil {
+			log.Printf("Failed to query grouped issues: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to group issues"})
+		}
+		defer rows.Close()
+
+		issueSet := make(map[string]struct{})
+		found := false
+		for rows.Next() {
+			var issueID string
+			if err := rows.Scan(&issueID); err == nil {
+				log.Printf("Found issue ID: %s", issueID)
+				issueSet[issueID] = struct{}{}
+				found = true
+			} else {
+				log.Printf("Row scan error: %v", err)
+			}
+		}
+		if !found {
+			log.Println("No issues found by group_by query")
+		}
+		if err := rows.Err(); err != nil {
+			log.Printf("Row error: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to read grouped issues"})
+		}
+
+		for issueID := range issueSet {
+			log.Printf("Adding issue %s to view %s", issueID, viewID)
+			if err := h.Repo.AddIssueToViewTx(ctx, tx, db.AddIssueToViewParams{
+				ViewID:  viewID,
+				IssueID: issueID,
+			}); err != nil {
+				log.Printf("Failed to add issue %s to view: %v", issueID, err)
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"error": fmt.Sprintf("Failed to add issue %s to view", issueID),
+				})
+			}
+		}
+	}
+
+	log.Println("View updated successfully")
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "View updated successfully"})
 }

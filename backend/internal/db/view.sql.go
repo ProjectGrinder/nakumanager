@@ -72,7 +72,7 @@ func (q *Queries) DeleteView(ctx context.Context, id string) error {
 }
 
 const getIssuesByAssignee = `-- name: GetIssuesByAssignee :many
-SELECT i.id, i.title, i.content, i.priority, i.status, i.assignee, i.project_id, i.team_id, i.start_date, i.end_date, i.label, i.owner_id
+SELECT i.id, i.title, i.content, i.priority, i.status, i.project_id, i.team_id, i.start_date, i.end_date, i.label, i.owner_id
 FROM issues i
 JOIN issue_assignees ia ON ia.issue_id = i.id
 WHERE ia.user_id = ? AND i.team_id = ?
@@ -98,7 +98,6 @@ func (q *Queries) GetIssuesByAssignee(ctx context.Context, arg GetIssuesByAssign
 			&i.Content,
 			&i.Priority,
 			&i.Status,
-			&i.Assignee,
 			&i.ProjectID,
 			&i.TeamID,
 			&i.StartDate,
@@ -120,7 +119,7 @@ func (q *Queries) GetIssuesByAssignee(ctx context.Context, arg GetIssuesByAssign
 }
 
 const getIssuesByEndDate = `-- name: GetIssuesByEndDate :many
-SELECT id, title, content, priority, status, assignee, project_id, team_id, start_date, end_date, label, owner_id FROM issues
+SELECT id, title, content, priority, status, project_id, team_id, start_date, end_date, label, owner_id FROM issues
 WHERE team_id = ? AND end_date  = ?
 `
 
@@ -144,7 +143,6 @@ func (q *Queries) GetIssuesByEndDate(ctx context.Context, arg GetIssuesByEndDate
 			&i.Content,
 			&i.Priority,
 			&i.Status,
-			&i.Assignee,
 			&i.ProjectID,
 			&i.TeamID,
 			&i.StartDate,
@@ -166,7 +164,7 @@ func (q *Queries) GetIssuesByEndDate(ctx context.Context, arg GetIssuesByEndDate
 }
 
 const getIssuesByLabel = `-- name: GetIssuesByLabel :many
-SELECT id, title, content, priority, status, assignee, project_id, team_id, start_date, end_date, label, owner_id FROM issues
+SELECT id, title, content, priority, status, project_id, team_id, start_date, end_date, label, owner_id FROM issues
 WHERE team_id = ? AND Label = ?
 `
 
@@ -190,7 +188,6 @@ func (q *Queries) GetIssuesByLabel(ctx context.Context, arg GetIssuesByLabelPara
 			&i.Content,
 			&i.Priority,
 			&i.Status,
-			&i.Assignee,
 			&i.ProjectID,
 			&i.TeamID,
 			&i.StartDate,
@@ -212,7 +209,7 @@ func (q *Queries) GetIssuesByLabel(ctx context.Context, arg GetIssuesByLabelPara
 }
 
 const getIssuesByPriority = `-- name: GetIssuesByPriority :many
-SELECT id, title, content, priority, status, assignee, project_id, team_id, start_date, end_date, label, owner_id FROM issues
+SELECT id, title, content, priority, status, project_id, team_id, start_date, end_date, label, owner_id FROM issues
 WHERE team_id = ? AND priority = ?
 `
 
@@ -236,7 +233,6 @@ func (q *Queries) GetIssuesByPriority(ctx context.Context, arg GetIssuesByPriori
 			&i.Content,
 			&i.Priority,
 			&i.Status,
-			&i.Assignee,
 			&i.ProjectID,
 			&i.TeamID,
 			&i.StartDate,
@@ -260,7 +256,7 @@ func (q *Queries) GetIssuesByPriority(ctx context.Context, arg GetIssuesByPriori
 const getIssuesByProject = `-- name: GetIssuesByProject :many
 ;
 
-SELECT id, title, content, priority, status, assignee, project_id, team_id, start_date, end_date, label, owner_id FROM issues
+SELECT id, title, content, priority, status, project_id, team_id, start_date, end_date, label, owner_id FROM issues
 WHERE team_id = ? AND project_id = ?
 `
 
@@ -284,7 +280,6 @@ func (q *Queries) GetIssuesByProject(ctx context.Context, arg GetIssuesByProject
 			&i.Content,
 			&i.Priority,
 			&i.Status,
-			&i.Assignee,
 			&i.ProjectID,
 			&i.TeamID,
 			&i.StartDate,
@@ -306,7 +301,7 @@ func (q *Queries) GetIssuesByProject(ctx context.Context, arg GetIssuesByProject
 }
 
 const getIssuesByStatus = `-- name: GetIssuesByStatus :many
-SELECT id, title, content, priority, status, assignee, project_id, team_id, start_date, end_date, label, owner_id FROM issues
+SELECT id, title, content, priority, status, project_id, team_id, start_date, end_date, label, owner_id FROM issues
 WHERE team_id = ? AND status = ?
 `
 
@@ -330,7 +325,6 @@ func (q *Queries) GetIssuesByStatus(ctx context.Context, arg GetIssuesByStatusPa
 			&i.Content,
 			&i.Priority,
 			&i.Status,
-			&i.Assignee,
 			&i.ProjectID,
 			&i.TeamID,
 			&i.StartDate,
@@ -352,7 +346,7 @@ func (q *Queries) GetIssuesByStatus(ctx context.Context, arg GetIssuesByStatusPa
 }
 
 const getIssuesByTeamID = `-- name: GetIssuesByTeamID :many
-SELECT id, title, content, priority, status, assignee, project_id, team_id, start_date, end_date, label, owner_id FROM issues
+SELECT id, title, content, priority, status, project_id, team_id, start_date, end_date, label, owner_id FROM issues
 WHERE team_id = ?
 `
 
@@ -371,7 +365,6 @@ func (q *Queries) GetIssuesByTeamID(ctx context.Context, teamID string) ([]Issue
 			&i.Content,
 			&i.Priority,
 			&i.Status,
-			&i.Assignee,
 			&i.ProjectID,
 			&i.TeamID,
 			&i.StartDate,
@@ -390,6 +383,19 @@ func (q *Queries) GetIssuesByTeamID(ctx context.Context, teamID string) ([]Issue
 		return nil, err
 	}
 	return items, nil
+}
+
+const getTeamIDByViewID = `-- name: GetTeamIDByViewID :one
+SELECT team_id
+FROM views
+WHERE id = ?
+`
+
+func (q *Queries) GetTeamIDByViewID(ctx context.Context, id string) (string, error) {
+	row := q.db.QueryRowContext(ctx, getTeamIDByViewID, id)
+	var team_id string
+	err := row.Scan(&team_id)
+	return team_id, err
 }
 
 const getViewByID = `-- name: GetViewByID :many
@@ -456,7 +462,7 @@ func (q *Queries) ListGroupByViewID(ctx context.Context, viewID string) ([]strin
 }
 
 const listIssuesByViewID = `-- name: ListIssuesByViewID :many
-SELECT i.id, i.title, i.content, i.priority, i.status, i.assignee, i.project_id, i.team_id, i.start_date, i.end_date, i.label, i.owner_id
+SELECT i.id, i.title, i.content, i.priority, i.status, i.project_id, i.team_id, i.start_date, i.end_date, i.label, i.owner_id
 FROM issues i
 JOIN view_issues vi ON i.id = vi.issue_id
 WHERE vi.view_id = ?
@@ -477,13 +483,46 @@ func (q *Queries) ListIssuesByViewID(ctx context.Context, viewID string) ([]Issu
 			&i.Content,
 			&i.Priority,
 			&i.Status,
-			&i.Assignee,
 			&i.ProjectID,
 			&i.TeamID,
 			&i.StartDate,
 			&i.EndDate,
 			&i.Label,
 			&i.OwnerID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listViewByTeamID = `-- name: ListViewByTeamID :many
+SELECT id, name, created_by, team_id
+FROM views
+WHERE team_id = ?
+`
+
+func (q *Queries) ListViewByTeamID(ctx context.Context, teamID string) ([]View, error) {
+	rows, err := q.db.QueryContext(ctx, listViewByTeamID, teamID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []View{}
+	for rows.Next() {
+		var i View
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.CreatedBy,
+			&i.TeamID,
 		); err != nil {
 			return nil, err
 		}
@@ -580,5 +619,20 @@ type UpdateViewNameParams struct {
 
 func (q *Queries) UpdateViewName(ctx context.Context, arg UpdateViewNameParams) error {
 	_, err := q.db.ExecContext(ctx, updateViewName, arg.Name, arg.ID)
+	return err
+}
+
+const updateViewTeamID = `-- name: UpdateViewTeamID :exec
+UPDATE views SET team_id = ? 
+WHERE id = ?
+`
+
+type UpdateViewTeamIDParams struct {
+	TeamID string `json:"team_id"`
+	ID     string `json:"id"`
+}
+
+func (q *Queries) UpdateViewTeamID(ctx context.Context, arg UpdateViewTeamIDParams) error {
+	_, err := q.db.ExecContext(ctx, updateViewTeamID, arg.TeamID, arg.ID)
 	return err
 }

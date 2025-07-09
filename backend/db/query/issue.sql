@@ -41,7 +41,6 @@ WHERE ia.issue_id = ?;
 
 
 -- name: GetIssueByUserID :many
--- name: GetIssuesByUserID :many
 SELECT DISTINCT i.*
 FROM issues i
 LEFT JOIN issue_assignees ia ON i.id = ia.issue_id

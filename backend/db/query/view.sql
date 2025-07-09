@@ -44,6 +44,11 @@ FROM issues i
 JOIN view_issues vi ON i.id = vi.issue_id
 WHERE vi.view_id = ?;
 
+-- name: ListViewByTeamID :many
+SELECT *
+FROM views
+WHERE team_id = ?;
+
 -- name: GetIssuesByStatus :many
 SELECT * FROM issues
 WHERE team_id = ? AND status = ?;
@@ -81,3 +86,12 @@ WHERE id = ?;
 -- name: UpdateViewGroupBy :exec
 UPDATE view_group_bys SET group_by = ? 
 WHERE view_id = ?;
+
+-- name: UpdateViewTeamID :exec
+UPDATE views SET team_id = ? 
+WHERE id = ?;
+
+-- name: GetTeamIDByViewID :one
+SELECT team_id
+FROM views
+WHERE id = ?;
