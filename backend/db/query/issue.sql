@@ -1,9 +1,9 @@
 -- name: CreateIssue :exec
 INSERT INTO issues (
-    id, title, content, priority, status, project_id, team_id, assignee,
+    id, title, content, priority, status, project_id, team_id,
     start_date, end_date, label, owner_id
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: GetIssueByID :one
 SELECT *
@@ -41,22 +41,8 @@ WHERE ia.issue_id = ?;
 
 
 -- name: GetIssueByUserID :many
-SELECT i.*
+-- name: GetIssuesByUserID :many
+SELECT DISTINCT i.*
 FROM issues i
-JOIN issue_assignees ia ON i.id = ia.issue_id
-WHERE ia.user_id = ?;
-
--- name: UpdateIssue :exec
-UPDATE issues
-SET
-    title = ?,
-    content = ?,
-    priority = ?,
-    status = ?,
-    project_id = ?,
-    team_id = ?,
-    start_date = ?,
-    end_date = ?,
-    label = ?,
-    owner_id = ?
-WHERE id = ?;
+LEFT JOIN issue_assignees ia ON i.id = ia.issue_id
+WHERE i.owner_id = ? OR ia.user_id = ?;

@@ -7,4 +7,3 @@ type User struct {
 	Email        string `json:"email" validate:"required"`
 	Roles        string `json:"roles" validate:"required"`
 }
-

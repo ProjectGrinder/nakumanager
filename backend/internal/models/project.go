@@ -3,17 +3,17 @@ package model
 import "time"
 
 type CreateProject struct {
-	ID          string  `json:"id" validate:"required"`
-	Name        string  `json:"name" validate:"required"`
-	Status      string  `json:"status"`
-	Priority    string  `json:"priority"`
-	WorkspaceID string  `json:"workspace_id" validate:"required"`
-	TeamID      string  `json:"team_id" validate:"required"`
-	LeaderID    *string `json:"leader_id"`
-	StartDate   string  `json:"start_date"`
-	EndDate     string  `json:"end_date"`
-	Label       string  `json:"label"`
-	CreatedBy   string  `json:"created_by" validate:"required"`
+	ID          string    `json:"id" validate:"required"`
+	Name        string    `json:"name" validate:"required"`
+	Status      string    `json:"status"`
+	Priority    string    `json:"priority"`
+	WorkspaceID string    `json:"workspace_id" validate:"required"`
+	TeamID      string    `json:"team_id" validate:"required"`
+	LeaderID    *string   `json:"leader_id"`
+	StartDate   time.Time `json:"start_date"`
+	EndDate     time.Time `json:"end_date"`
+	Label       string    `json:"label"`
+	CreatedBy   string    `json:"created_by" validate:"required"`
 }
 
 type EditProject struct {
