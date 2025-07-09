@@ -1,10 +1,10 @@
-import WorkspaceBar from "@/components/WorkspaceBar";
+import Sidebar from "@/components/Sidebar";
 import ViewList from "@/components/view/ViewList";
 
 export default function ViewListPage() {
   return (
     <div className="flex flex-row">
-      <WorkspaceBar />;
+      <Sidebar />;
       <ViewList />
     </div>
   );

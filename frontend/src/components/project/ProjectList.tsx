@@ -27,7 +27,7 @@ export default function ProjectList() {
     <div className="flex flex-col p-6 text-white w-9/10">
       <div className="flex flex-row items-center mb-4 gap-6">
         <span className="text-lg font-bold">All Projects</span>
-        <button className="p-2 bg-blue-500 text-xs text-white rounded-md hover:bg-blue-700">
+        <button className="px-3 py-2 bg-blue-500 text-xs text-white rounded-md hover:bg-blue-700">
           <i className="fa-solid fa-plus text-[0.5rem] mr-2"></i>
           Create project
         </button>
