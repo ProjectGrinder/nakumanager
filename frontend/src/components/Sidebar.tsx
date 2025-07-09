@@ -7,8 +7,6 @@ import SidebarButton from "./SidebarButton";
 export default function Sidebar() {
   const currentWorkspace = "Workspace 1";
   const teams = ["Team 1", "Team 2", "Team 3"];
-  const workspaces = ["Workspace 1", "Workspace 2", "Workspace 3"];
-  const joinedWorkspaces = ["Joined Workspace 1", "Joined Workspace 2"];
   const router = useRouter();
   const handleLogout = () => {
     router.push("/login");
@@ -30,7 +28,7 @@ export default function Sidebar() {
       <hr className="border-gray-500 mb-2"></hr>
       <div>
         <div className="flex flex-row items-center justify-between p-1 mb-2 text-gray-400 text-sm">
-          <span className="max-w-45 truncate">My Workspace</span>
+          <span className="max-w-45 truncate">{currentWorkspace}</span>
           <span className="w-6 h-6 text-center rounded-xl cursor-pointer hover:bg-gray-600 transition duration-200">
             ...
           </span>

@@ -51,14 +51,20 @@ export default function WorkspaceInfo() {
               key={idx}
               className="h-12 text-sm hover:bg-gray-800 text-gray-400 transition-colors"
             >
-              <td>
+              <td className="rounded-l-md">
                 <div className="flex justify-center">
                   <CustomAvatar name={member[0]} />
                 </div>
               </td>
               <td className="text-gray-200 font-medium">{member[0]}</td>
               <td>{member[1]}</td>
-              <td></td>
+              <td className="rounded-r-md h-full align-middle">
+                <div className="flex justify-center items-center h-full">
+                  <div className="flex justify-center items-center h-6 w-6 rounded-xl cursor-pointer hover:bg-gray-700 transition duration-200">
+                    <i className="fa-solid fa-xmark text-gray-500 text-base"></i>
+                  </div>
+                </div>
+              </td>
             </tr>
           ))}
         </tbody>
