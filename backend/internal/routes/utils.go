@@ -18,13 +18,11 @@ func ToNullString(s *string) sql.NullString {
 	return sql.NullString{}
 }
 
-func toNullTime(s *string) sql.NullTime {
-	if s != nil {
-		if t, err := time.Parse(time.RFC3339, *s); err == nil {
-			return sql.NullTime{Time: t, Valid: true}
-		}
+func ToNullTime(t *time.Time) sql.NullTime {
+	if t == nil {
+		return sql.NullTime{Valid: false}
 	}
-	return sql.NullTime{}
+	return sql.NullTime{Time: *t, Valid: true}
 }
 
 func nullStringToString(ns sql.NullString) string {
@@ -70,6 +68,62 @@ func buildUpdateQuery(p models.EditProject) (string, []interface{}) {
 
 	query += strings.Join(sets, ", ") + " WHERE id = ?"
 	args = append(args, p.ID)
+
+	return query, args
+}
+
+func buildUpdateIssueQuery(i models.UpdateIssueRequest) (string, []interface{}) {
+	query := "UPDATE issues SET "
+	args := []interface{}{}
+	sets := []string{}
+
+	if i.Title != nil {
+		sets = append(sets, "title = ?")
+		args = append(args, *i.Title)
+	}
+	if i.Content != nil {
+		sets = append(sets, "content = ?")
+		args = append(args, *i.Content)
+	}
+	if i.Priority != nil {
+		sets = append(sets, "priority = ?")
+		args = append(args, *i.Priority)
+	}
+	if i.Status != nil {
+		sets = append(sets, "status = ?")
+		args = append(args, *i.Status)
+	}
+	if i.ProjectID != nil {
+		sets = append(sets, "project_id = ?")
+		args = append(args, *i.ProjectID)
+	}
+	if i.TeamID != nil {
+		sets = append(sets, "team_id = ?")
+		args = append(args, *i.TeamID)
+	}
+	if i.StartDate != nil {
+		sets = append(sets, "start_date = ?")
+		args = append(args, *i.StartDate)
+	}
+	if i.EndDate != nil {
+		sets = append(sets, "end_date = ?")
+		args = append(args, *i.EndDate)
+	}
+	if i.Label != nil {
+		sets = append(sets, "label = ?")
+		args = append(args, *i.Label)
+	}
+	if i.OwnerID != nil {
+		sets = append(sets, "owner_id = ?")
+		args = append(args, *i.OwnerID)
+	}
+
+	if len(sets) == 0 {
+		return "", nil
+	}
+
+	query += strings.Join(sets, ", ") + " WHERE id = ?"
+	args = append(args, i.ID)
 
 	return query, args
 }
