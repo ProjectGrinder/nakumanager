@@ -1,6 +1,6 @@
 "use client";
 
-import SelectableItem from "./SelectableItem";
+import ProjectSelectItem from "./ProjectSelectItem";
 
 export default function ProjectList() {
   const project_list = [
@@ -24,14 +24,17 @@ export default function ProjectList() {
     ],
   ];
   return (
-    <div className="flex flex-col p-10 text-white w-9/10">
-      <div className="flex-row text-2xl font-bold mb-6">
-        <span>All Projects</span>
-        <i className="fa-solid fa-square-plus text-2xl ml-10"></i>
+    <div className="flex flex-col p-6 text-white w-9/10">
+      <div className="flex flex-row items-center mb-4 gap-6">
+        <span className="text-lg font-bold">All Projects</span>
+        <button className="p-2 bg-blue-500 text-xs text-white rounded-md hover:bg-blue-700">
+          <i className="fa-solid fa-plus text-[0.5rem] mr-2"></i>
+          Create project
+        </button>
       </div>
       <div className="h-150 overflow-y-auto">
         {project_list.map((project, index) => (
-          <SelectableItem
+          <ProjectSelectItem
             name={project[0]}
             status={project[1]}
             priority={project[2]}

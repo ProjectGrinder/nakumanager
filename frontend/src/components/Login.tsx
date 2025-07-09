@@ -5,17 +5,17 @@ import { users } from "../Database";
 import { useState } from "react";
 
 export default function Login() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const handleLogin = () => {
-    if (username == "" || password == "") {
+    if (email == "" || password == "") {
       alert("Please fill in every field");
       return;
     }
-    const user = users.find((user) => user[0] === username);
+    const user = users.find((user) => user[0] === email);
     if (user) console.log("Login Successful");
-    else alert("Username or password is incorrect");
+    else alert("Email or password is incorrect");
   };
 
   return (
@@ -32,10 +32,10 @@ export default function Login() {
           <div className="w-full m-2">
             <p className="text-sm pb-2 text-gray-200">Username</p>
             <input
-              id="username"
+              id="email"
               type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-gray-200 border-2 border-gray-400 text-gray-700 px-4 py-2 text-sm rounded-xl outline-none"
             />
           </div>

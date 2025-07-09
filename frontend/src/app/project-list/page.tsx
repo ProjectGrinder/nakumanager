@@ -1,10 +1,10 @@
-import WorkspaceBar from "@/components/WorkspaceBar";
 import ProjectList from "@/components/ProjectList";
+import Sidebar from "@/components/Sidebar";
 
 export default function ProjectListPage() {
   return (
     <div className="flex flex-row">
-      <WorkspaceBar />;
+      <Sidebar />;
       <ProjectList />
     </div>
   );

@@ -13,7 +13,7 @@ type SelectableItemProps = {
   destination: string;
 };
 
-export default function SelectableItem(props: SelectableItemProps) {
+export default function ProjectSelectItem(props: SelectableItemProps) {
   const handleClick = () => {
     if (props.destination != "") {
       console.log(props.destination);
@@ -21,22 +21,22 @@ export default function SelectableItem(props: SelectableItemProps) {
   };
   return (
     <div
-      className="flex flex-row align-center w-4/5 p-4 m-2 rounded-lg bg-gray-800 hover:bg-gray-700 cursor-pointer"
+      className="flex flex-row items-center w-4/5 p-2 my-2 text-gray-200 rounded-lg bg-gray-800 hover:bg-gray-700 active:bg-gray-600 cursor-pointer transition duration-200"
       onClick={handleClick}
     >
-      <span className="inline-block w-2/5 font-bold text-xl p-2 overflow-hidden text-ellipsis whitespace-nowrap">
+      <span className="inline-block w-3/5 font-bold text-lg p-2 overflow-hidden text-ellipsis whitespace-nowrap">
         {props.name}
       </span>
-      <span className="w-1/20 font-bold text-xl p-2">
+      <span className="w-1/20 font-bold text-lg p-2">
         {StatusIcon(props.status)}
       </span>
-      <span className="w-1/20 font-bold text-xl p-2">
+      <span className="w-1/20 font-bold text-lg p-2">
         {PriorityIcon(props.priority)}
       </span>
-      <span className="w-1/20 font-bold text-xl p-2">
+      <span className="w-1/20 font-bold text-lg p-2">
         {AssignedIcon(props.assigned)}
       </span>
-      <span className="w-2/5 font-normal text-lg p-2 pl-30">
+      <span className="w-2/5 font-normal text-base p-2 pl-30">
         {DateFormat(props.startDate)} - {DateFormat(props.endDate)}
       </span>
     </div>
