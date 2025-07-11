@@ -3,7 +3,7 @@ package mock
 import (
 	"context"
 
-	"github.com/nack098/nakumanager/internal/db"
+	db "github.com/nack098/nakumanager/internal/db"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -26,11 +26,6 @@ func (m *MockWorkspaceRepo) DeleteWorkspace(ctx context.Context, id string) erro
 	return args.Error(0)
 }
 
-func (m *MockWorkspaceRepo) ListWorkspaceMembers(ctx context.Context, workspaceID string) ([]db.User, error) {
-	args := m.Called(ctx, workspaceID)
-	return args.Get(0).([]db.User), args.Error(1)
-}
-
 func (m *MockWorkspaceRepo) AddMemberToWorkspace(ctx context.Context, workspaceID, userID string) error {
 	args := m.Called(ctx, workspaceID, userID)
 	return args.Error(0)
@@ -48,16 +43,5 @@ func (m *MockWorkspaceRepo) RenameWorkspace(ctx context.Context, id string, newN
 
 func (m *MockWorkspaceRepo) ListWorkspacesWithMembersByUserID(ctx context.Context, userID string) ([]db.ListWorkspacesWithMembersByUserIDRow, error) {
 	args := m.Called(ctx, userID)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
 	return args.Get(0).([]db.ListWorkspacesWithMembersByUserIDRow), args.Error(1)
-}
-
-func (m *MockWorkspaceRepo) GetWorkspaceByUserID(ctx context.Context, userID string) ([]db.Workspace, error) {
-	args := m.Called(ctx, userID)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).([]db.Workspace), args.Error(1)
 }
