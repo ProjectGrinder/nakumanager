@@ -30,10 +30,7 @@ func (h *WorkspaceHandler) CreateWorkspace(c *fiber.Ctx) error {
 	var workspace models.CreateWorkspace
 
 	//Check if user is authenticated
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
+	userID := c.Locals("userID").(string)
 
 	//Parse request
 	if err := c.BodyParser(&workspace); err != nil {
@@ -70,11 +67,7 @@ func (h *WorkspaceHandler) CreateWorkspace(c *fiber.Ctx) error {
 
 // GetWorkspacesByUserID
 func (h *WorkspaceHandler) GetWorkspacesByUserID(c *fiber.Ctx) error {
-	//Check if user is authenticated
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
+	userID := c.Locals("userID").(string)
 
 	//Get workspaces
 	workspaces, err := h.Repo.ListWorkspacesWithMembersByUserID(c.Context(), userID)
@@ -89,15 +82,12 @@ func (h *WorkspaceHandler) GetWorkspacesByUserID(c *fiber.Ctx) error {
 func (h *WorkspaceHandler) DeleteWorkspace(c *fiber.Ctx) error {
 	//Check if workspace id is provided
 	workspaceID := strings.TrimSpace(c.Params("workspaceid"))
-	if workspaceID == "" {
+	if workspaceID == "" || workspaceID == "undefined" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "workspace id is required"})
 	}
 
 	//Check if user is authenticated
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
+	userID := c.Locals("userID").(string)
 
 	//Get workspace
 	workspace, err := h.Repo.GetWorkspaceByID(c.Context(), workspaceID)
@@ -121,14 +111,11 @@ func (h *WorkspaceHandler) DeleteWorkspace(c *fiber.Ctx) error {
 
 func (h *WorkspaceHandler) UpdateWorkspace(c *fiber.Ctx) error {
 	workspaceID := strings.TrimSpace(c.Params("workspaceid"))
-	if workspaceID == "" || workspaceID == "empty" {
+	if workspaceID == "" || workspaceID == "undefined" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "workspace id is required"})
 	}
 
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
+	userID := c.Locals("userID").(string)
 
 	workspace, err := h.Repo.GetWorkspaceByID(c.Context(), workspaceID)
 	if err != nil {
@@ -157,7 +144,7 @@ func (h *WorkspaceHandler) UpdateWorkspace(c *fiber.Ctx) error {
 	if req.AddMembers != nil {
 		for _, memberID := range *req.AddMembers {
 			if err := h.Repo.AddMemberToWorkspace(c.Context(), workspaceID, memberID); err != nil {
-				log.Printf("Failed to add member %s: %v", memberID, err)
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to add member to workspace"})
 			}
 		}
 	}
@@ -166,7 +153,7 @@ func (h *WorkspaceHandler) UpdateWorkspace(c *fiber.Ctx) error {
 	if req.RemoveMembers != nil {
 		for _, memberID := range *req.RemoveMembers {
 			if err := h.Repo.RemoveMemberFromWorkspace(c.Context(), workspaceID, memberID); err != nil {
-				log.Printf("Failed to remove member %s: %v", memberID, err)
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to remove member from workspace"})
 			}
 		}
 	}
