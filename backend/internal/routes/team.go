@@ -25,12 +25,7 @@ func NewTeamHandler(repo repositories.TeamRepository, workspaceRepo repositories
 
 // CreateTeam
 func (h *TeamHandler) CreateTeam(c *fiber.Ctx) error {
-	//Check if user is authenticated
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
-
+	userID := c.Locals("userID").(string)
 	//Parse request
 	var request models.CreateTeam
 	if err := c.BodyParser(&request); err != nil {
@@ -40,7 +35,7 @@ func (h *TeamHandler) CreateTeam(c *fiber.Ctx) error {
 	//Check if workspace exists
 	workspace, err := h.WorkspaceRepo.GetWorkspaceByID(c.Context(), request.WorkspaceID)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "workspace not found"})
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "workspace not found"})
 	}
 
 	//Check if user is owner of workspace
@@ -83,12 +78,7 @@ func (h *TeamHandler) CreateTeam(c *fiber.Ctx) error {
 
 // GetTeamsByUserID
 func (h *TeamHandler) GetTeamsByUserID(c *fiber.Ctx) error {
-	//Check if user is authenticated
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
-
+	userID := c.Locals("userID").(string)
 	//Get teams
 	team, err := h.Repo.GetTeamsByUserID(c.Context(), userID)
 	if err != nil {
@@ -108,11 +98,7 @@ func (h *TeamHandler) GetTeamsByUserID(c *fiber.Ctx) error {
 
 // DeleteTeam
 func (h *TeamHandler) DeleteTeam(c *fiber.Ctx) error {
-	//Check if user is authenticated
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
+	userID := c.Locals("userID").(string)
 
 	//Parse request
 	teamID := c.Params("id")
@@ -147,10 +133,7 @@ func (h *TeamHandler) DeleteTeam(c *fiber.Ctx) error {
 }
 
 func (h *TeamHandler) UpdateTeam(c *fiber.Ctx) error {
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
+	userID := c.Locals("userID").(string)
 
 	teamID := strings.TrimSpace(c.Params("id"))
 	if teamID == "" || teamID == "empty" {

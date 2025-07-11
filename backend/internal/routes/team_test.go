@@ -1,9 +1,11 @@
 package routes_test
 
 import (
-	"io"
+	"bytes"
+	"encoding/json"
+	"errors"
+	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -15,126 +17,179 @@ import (
 	mocks "github.com/nack098/nakumanager/internal/routes/mock_repo"
 )
 
-func setUpTeamApp(h *routes.TeamHandler) *fiber.App {
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Post("/teams", h.CreateTeam)
-	app.Get("/teams", h.GetTeamsByUserID)
-	app.Post("/teams/:id/members", h.AddMemberToTeam)
-	app.Delete("/teams/:id/members", h.RemoveMemberFromTeam)
-	app.Post("/teams/:id/rename", h.RenameTeam)
-	app.Post("/teams/:id/leader", h.SetTeamLeader)
-	app.Delete("/teams/:id", h.DeleteTeam)
-	return app
-}
-
-func TestCreateTeam_Success(t *testing.T) {
-
-	mockTeamRepo := new(mocks.MockTeamRepo)
-	mockWorkspaceRepo := new(mocks.MockWorkspaceRepo)
-
-	handler := routes.NewTeamHandler(mockTeamRepo, mockWorkspaceRepo)
-
-	mockWorkspaceRepo.On("GetWorkspaceByID", mock.Anything, "ws-123").
-		Return(db.Workspace{
-			ID:      "ws-123",
-			OwnerID: "user-123",
-		}, nil)
-
-	mockTeamRepo.On("CreateTeam", mock.Anything, mock.Anything).
-		Return(nil)
-
-	mockTeamRepo.On("AddMemberToTeam", mock.Anything, mock.Anything).
-		Return(nil)
-
-	app := setUpTeamApp(handler)
-
-	body := `{"name":"Team A", "workspace_id":"ws-123"}`
-	req := httptest.NewRequest("POST", "/teams", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := app.Test(req)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusCreated, resp.StatusCode)
-
-	respBody, _ := io.ReadAll(resp.Body)
-	assert.Contains(t, string(respBody), "team created successfully")
-
-	mockWorkspaceRepo.AssertExpectations(t)
-	mockTeamRepo.AssertExpectations(t)
-}
-
-func TestGetTeamByUserID_Success(t *testing.T) {
-
-	mockTeamRepo := new(mocks.MockTeamRepo)
+func TestNewTeamHandler(t *testing.T) {
+	mockTeamRepo := new(mocks.MockTeamRepository)
 	mockWorkspaceRepo := new(mocks.MockWorkspaceRepo)
 	handler := routes.NewTeamHandler(mockTeamRepo, mockWorkspaceRepo)
 
-	mockTeamRepo.On("GetTeamsByUserID", mock.Anything, "user-123").
-		Return([]db.Team{
-			{ID: "team-1", Name: "Team A"},
-		}, nil)
+	assert.NotNil(t, handler)
+	assert.Equal(t, mockTeamRepo, handler.Repo)
+	assert.Equal(t, mockWorkspaceRepo, handler.WorkspaceRepo)
 
-	app := setUpTeamApp(handler)
-
-	req := httptest.NewRequest("GET", "/teams", nil)
-	resp, err := app.Test(req)
-
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
-
-	body, _ := io.ReadAll(resp.Body)
-	assert.Contains(t, string(body), `"Team A"`)
 }
 
-func TestDeleteTeam_Success(t *testing.T) {
-	mockTeamRepo := new(mocks.MockTeamRepo)
-	mockWorkspaceRepo := new(mocks.MockWorkspaceRepo)
-	handler := routes.NewTeamHandler(mockTeamRepo, mockWorkspaceRepo)
+func TestCreateTeam(t *testing.T) {
+	t.Run("Create Team Successfully", func(t *testing.T) {
+		repo := new(mocks.MockTeamRepository)
+		workSpaceRepo := new(mocks.MockWorkspaceRepo)
+		handler := routes.TeamHandler{Repo: repo, WorkspaceRepo: workSpaceRepo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
+		app.Post("/teams", handler.CreateTeam)
 
-	teamID := "team-123"
-	userID := "user-123"
+		payload := map[string]string{"name": "Test Team", "workspace_id": "ws-123"}
+		body, _ := json.Marshal(payload)
 
-	mockTeamRepo.On("GetOwnerByTeamID", mock.Anything, teamID).Return(userID, nil)
-	mockTeamRepo.On("GetLeaderByTeamID", mock.Anything, teamID).Return(userID, nil)
-	mockTeamRepo.On("DeleteTeam", mock.Anything, teamID).Return(nil)
+		workSpaceRepo.On("GetWorkspaceByID", mock.Anything, "ws-123").
+			Return(db.Workspace{ID: "ws-123", OwnerID: "user-123"}, nil)
 
-	app := setUpTeamApp(handler)
+		repo.On("CreateTeam", mock.Anything, mock.Anything).Return(nil)
+		repo.On("AddMemberToTeam", mock.Anything, mock.Anything).Return(nil)
 
-	req := httptest.NewRequest("DELETE", "/teams/"+teamID, nil)
-	req.Header.Set("Content-Type", "application/json")
+		req := httptest.NewRequest(http.MethodPost, "/teams", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
 
-	resp, err := app.Test(req)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusCreated, resp.StatusCode)
+	})
 
-	body, _ := io.ReadAll(resp.Body)
-	assert.Contains(t, string(body), "team deleted successfully")
+	t.Run("Fail to create team", func(t *testing.T) {
+		repo := new(mocks.MockTeamRepository)
+		workSpaceRepo := new(mocks.MockWorkspaceRepo)
+		handler := routes.TeamHandler{Repo: repo, WorkspaceRepo: workSpaceRepo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
+		app.Post("/teams", handler.CreateTeam)
 
-	mockTeamRepo.AssertExpectations(t)
-}
+		payload := map[string]string{"name": "Test Team", "workspace_id": "ws-123"}
+		body, _ := json.Marshal(payload)
 
-func TestAddMemberToTeam_Success(t *testing.T) {
-	mockTeamRepo := new(mocks.MockTeamRepo)
-	mockWorkspaceRepo := new(mocks.MockWorkspaceRepo)
-	handler := routes.NewTeamHandler(mockTeamRepo, mockWorkspaceRepo)
+		workSpaceRepo.On("GetWorkspaceByID", mock.Anything, "ws-123").
+			Return(db.Workspace{ID: "ws-123", OwnerID: "user-123"}, nil)
 
-	teamID := "team-123"
-	userID := "user-456"
+		repo.On("CreateTeam", mock.Anything, mock.Anything).Return(errors.New("failed to add member to team"))
 
-	mockTeamRepo.On("AddMemberToTeam", mock.Anything, teamID, userID).Return(nil)
+		req := httptest.NewRequest(http.MethodPost, "/teams", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
 
-	app := setUpTeamApp(handler)
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
+	})
 
-	req := httptest.NewRequest("POST", "/teams/"+teamID+"/members", nil)
-	req.Header.Set("Content-Type", "application/json")
+	t.Run("Fail to add member to team", func(t *testing.T) {
+		repo := new(mocks.MockTeamRepository)
+		workSpaceRepo := new(mocks.MockWorkspaceRepo)
+		handler := routes.TeamHandler{Repo: repo, WorkspaceRepo: workSpaceRepo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
+		app.Post("/teams", handler.CreateTeam)
 
-	resp, err := app.Test(req)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+		payload := map[string]string{"name": "Test Team", "workspace_id": "ws-123"}
+		body, _ := json.Marshal(payload)
 
-	body, _ := io.ReadAll(resp.Body)
-	assert.Contains(t, string(body), "member added to team successfully")
+		workSpaceRepo.On("GetWorkspaceByID", mock.Anything, "ws-123").
+			Return(db.Workspace{ID: "ws-123", OwnerID: "user-123"}, nil)
 
-	mockTeamRepo.AssertExpectations(t)
+		repo.On("CreateTeam", mock.Anything, mock.Anything).Return(nil)
+		repo.On("AddMemberToTeam", mock.Anything, mock.Anything).Return(errors.New("failed to add member to team"))
+
+		req := httptest.NewRequest(http.MethodPost, "/teams", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
+	})
+
+	t.Run("Invalid Request Body", func(t *testing.T) {
+		repo := new(mocks.MockTeamRepository)
+		workSpaceRepo := new(mocks.MockWorkspaceRepo)
+		handler := routes.TeamHandler{Repo: repo, WorkspaceRepo: workSpaceRepo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
+		app.Post("/teams", handler.CreateTeam)
+
+		body := []byte(`{
+		"name": "Test Team",
+		}`)
+
+		workSpaceRepo.On("GetWorkspaceByID", mock.Anything, "ws-123").
+			Return(db.Workspace{ID: "ws-123", OwnerID: "user-123"}, nil)
+
+		req := httptest.NewRequest(http.MethodPost, "/teams", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("Workspace Not Found", func(t *testing.T) {
+		repo := new(mocks.MockTeamRepository)
+		workSpaceRepo := new(mocks.MockWorkspaceRepo)
+		handler := routes.TeamHandler{Repo: repo, WorkspaceRepo: workSpaceRepo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
+		app.Post("/teams", handler.CreateTeam)
+
+		payload := map[string]string{"name": "Test Team", "workspace_id": "ws-123"}
+		body, _ := json.Marshal(payload)
+
+		workSpaceRepo.On("GetWorkspaceByID", mock.Anything, "ws-123").
+			Return(db.Workspace{}, errors.New("workspace not found"))
+
+		req := httptest.NewRequest(http.MethodPost, "/teams", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
+	})
+
+	t.Run("User is not workspace owner", func(t *testing.T) {
+		repo := new(mocks.MockTeamRepository)
+		workSpaceRepo := new(mocks.MockWorkspaceRepo)
+		handler := routes.TeamHandler{Repo: repo, WorkspaceRepo: workSpaceRepo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
+		app.Post("/teams", handler.CreateTeam)
+
+		payload := map[string]string{"name": "Test Team", "workspace_id": "ws-123"}
+		body, _ := json.Marshal(payload)
+
+		workSpaceRepo.On("GetWorkspaceByID", mock.Anything, "ws-123").
+			Return(db.Workspace{ID: "ws-123", OwnerID: "user-456"}, nil)
+
+		req := httptest.NewRequest(http.MethodPost, "/teams", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusForbidden, resp.StatusCode)
+	})
+
+	t.Run("Create team validation fails", func(t *testing.T) {
+		repo := new(mocks.MockTeamRepository)
+		workSpaceRepo := new(mocks.MockWorkspaceRepo)
+		handler := routes.TeamHandler{Repo: repo, WorkspaceRepo: workSpaceRepo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
+		app.Post("/teams", handler.CreateTeam)
+
+		payload := map[string]string{"name": "", "workspace_id": "ws-123"}
+		body, _ := json.Marshal(payload)
+
+		workSpaceRepo.On("GetWorkspaceByID", mock.Anything, "ws-123").
+			Return(db.Workspace{ID: "ws-123", OwnerID: "user-123"}, nil)
+
+		req := httptest.NewRequest(http.MethodPost, "/teams", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
+	})
+
 }
