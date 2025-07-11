@@ -14,8 +14,6 @@ type TeamRepository interface {
 	DeleteTeam(ctx context.Context, id string) error
 	GetTeamByID(ctx context.Context, id string) (db.Team, error)
 	GetTeamsByUserID(ctx context.Context, userID string) ([]db.Team, error)
-	ListTeamMembers(ctx context.Context, teamID string) ([]db.ListTeamMembersRow, error)
-	ListTeams(ctx context.Context) ([]db.Team, error)
 	GetOwnerByTeamID(ctx context.Context, teamID string) (string, error)
 	GetLeaderByTeamID(ctx context.Context, userID string) (string, error)
 	IsMemberInTeam(ctx context.Context, teamID, userID string) (bool, error)
@@ -59,14 +57,6 @@ func (r *teamRepo) GetTeamByID(ctx context.Context, id string) (db.Team, error) 
 
 func (r *teamRepo) GetTeamsByUserID(ctx context.Context, userID string) ([]db.Team, error) {
 	return r.queries.GetTeamsByUserID(ctx, userID)
-}
-
-func (r *teamRepo) ListTeamMembers(ctx context.Context, teamID string) ([]db.ListTeamMembersRow, error) {
-	return r.queries.ListTeamMembers(ctx, teamID)
-}
-
-func (r *teamRepo) ListTeams(ctx context.Context) ([]db.Team, error) {
-	return r.queries.ListTeams(ctx)
 }
 
 func (r *teamRepo) GetOwnerByTeamID(ctx context.Context, teamID string) (string, error) {
