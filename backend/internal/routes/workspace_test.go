@@ -2,8 +2,10 @@ package routes_test
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -36,672 +38,496 @@ func TestNewWorkspaceHandler(t *testing.T) {
 	assert.Equal(t, mockUserRepo, handler.UserRepo)
 }
 
-func TestCreateWorkspace_Success(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := routes.WorkspaceHandler{Repo: repo}
+func TestCreateWorkspace(t *testing.T) {
+	t.Run("Create Workspace Successfully", func(t *testing.T) {
+		repo := new(mocks.MockWorkspaceRepo)
+		handler := routes.WorkspaceHandler{Repo: repo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
+		app.Post("/workspaces", handler.CreateWorkspace)
 
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Post("/workspaces", handler.CreateWorkspace)
+		payload := map[string]string{"name": "Test Workspace"}
+		body, _ := json.Marshal(payload)
 
-	payload := map[string]string{"name": "Test Workspace"}
-	body, _ := json.Marshal(payload)
+		repo.On("CreateWorkspace", mock.Anything, mock.Anything, "Test Workspace", "user-123").Return(nil)
+		repo.On("AddMemberToWorkspace", mock.Anything, mock.Anything, "user-123").Return(nil)
 
-	repo.On("CreateWorkspace", mock.Anything, mock.Anything, "Test Workspace", "user-123").Return(nil)
-	repo.On("AddMemberToWorkspace", mock.Anything, mock.Anything, "user-123").Return(nil)
+		req := httptest.NewRequest(http.MethodPost, "/workspaces", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
 
-	req := httptest.NewRequest(http.MethodPost, "/workspaces", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusCreated, resp.StatusCode)
+	})
 
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusCreated, resp.StatusCode)
+	t.Run("Invalid request body", func(t *testing.T) {
+		repo := new(mocks.MockWorkspaceRepo)
+		handler := routes.WorkspaceHandler{Repo: repo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
+		app.Post("/workspaces", handler.CreateWorkspace)
+
+		payload := `{"name":`
+		body, _ := json.Marshal(payload)
+
+		req := httptest.NewRequest(http.MethodPost, "/workspaces", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
+
+	})
+
+	t.Run("Validation errors", func(t *testing.T) {
+		repo := new(mocks.MockWorkspaceRepo)
+		handler := routes.WorkspaceHandler{Repo: repo}
+		tests := []struct {
+			name     string
+			payload  string
+			expected int
+		}{
+			{
+				name:     "Empty name",
+				payload:  `{"name": ""}`,
+				expected: fiber.StatusBadRequest,
+			},
+			{
+				name:     "Missing name field",
+				payload:  `{}`,
+				expected: fiber.StatusBadRequest,
+			},
+		}
+
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
+		app.Post("/workspaces", handler.CreateWorkspace)
+
+		for _, tt := range tests {
+			req := httptest.NewRequest("POST", "/workspaces", strings.NewReader(tt.payload))
+			req.Header.Set("Content-Type", "application/json")
+
+			reqCtx := req.Context()
+			req = req.WithContext(reqCtx)
+			resp, _ := app.Test(req, -1)
+			assert.Equal(t, tt.expected, resp.StatusCode, tt.name)
+		}
+
+	})
+
+	t.Run("Create Workspace Fail", func(t *testing.T) {
+		repo := new(mocks.MockWorkspaceRepo)
+		handler := routes.WorkspaceHandler{Repo: repo}
+
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
+		app.Post("/workspaces", handler.CreateWorkspace)
+
+		payload := map[string]string{"name": "Test Workspace"}
+		body, _ := json.Marshal(payload)
+
+		repo.On("CreateWorkspace", mock.Anything, mock.Anything, "Test Workspace", "user-123").
+			Return(errors.New("create workspace failed"))
+
+		req := httptest.NewRequest(http.MethodPost, "/workspaces", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
+
+		repo.AssertCalled(t, "CreateWorkspace", mock.Anything, mock.Anything, "Test Workspace", "user-123")
+	})
+
+	t.Run("Fail to add cretor to workspace", func(t *testing.T) {
+		repo := new(mocks.MockWorkspaceRepo)
+		handler := routes.WorkspaceHandler{Repo: repo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
+		app.Post("/workspaces", handler.CreateWorkspace)
+
+		payload := map[string]string{"name": "Test Workspace"}
+		body, _ := json.Marshal(payload)
+
+		repo.On("CreateWorkspace", mock.Anything, mock.Anything, "Test Workspace", "user-123").Return(nil)
+		repo.On("AddMemberToWorkspace", mock.Anything, mock.Anything, "user-123").Return(errors.New("fail to add creator to workspace"))
+
+		req := httptest.NewRequest(http.MethodPost, "/workspaces", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
+	})
 }
 
-func TestCreateWorkspace_InvalidJSON(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := routes.WorkspaceHandler{Repo: repo}
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Post("/workspaces", handler.CreateWorkspace)
+func TestGetWorkspaceByUserID(t *testing.T) {
+	t.Run("Get workspace by user id successfully", func(t *testing.T) {
+		repo := new(mocks.MockWorkspaceRepo)
+		handler := routes.WorkspaceHandler{Repo: repo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
+		app.Get("/workspaces", handler.GetWorkspacesByUserID)
 
-	req := httptest.NewRequest(http.MethodPost, "/workspaces", strings.NewReader("{invalid json"))
-	req.Header.Set("Content-Type", "application/json")
+		expected := []db.ListWorkspacesWithMembersByUserIDRow{
+			{ID: "w1", Name: "Workspace 1", OwnerID: "user-123", UserID: sql.NullString{String: "user-123", Valid: true}},
+			{ID: "w2", Name: "Workspace 2", OwnerID: "user-123", UserID: sql.NullString{String: "user-123", Valid: true}},
+		}
+		repo.On("ListWorkspacesWithMembersByUserID", mock.Anything, "user-123").Return(expected, nil)
 
-	resp, _ := app.Test(req, -1)
-	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
+		req := httptest.NewRequest(http.MethodGet, "/workspaces", nil)
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+
+		body, _ := io.ReadAll(resp.Body)
+		var actual []db.ListWorkspacesWithMembersByUserIDRow
+		err = json.Unmarshal(body, &actual)
+		assert.NoError(t, err)
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("Fail to get workspace by user id", func(t *testing.T) {
+		repo := new(mocks.MockWorkspaceRepo)
+		handler := routes.WorkspaceHandler{Repo: repo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
+		app.Get("/workspaces", handler.GetWorkspacesByUserID)
+
+		repo.On("ListWorkspacesWithMembersByUserID", mock.Anything, "user-123").Return(nil, errors.New("fail to get workspace by user id"))
+
+		req := httptest.NewRequest(http.MethodGet, "/workspaces", nil)
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
+	})
 }
 
-func TestCreateWorkspace_MissingUserID(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := routes.WorkspaceHandler{Repo: repo}
+func TestDeleteWorkspace(t *testing.T) {
+	t.Run("Delete workspace successfully", func(t *testing.T) {
+		repo := new(mocks.MockWorkspaceRepo)
+		handler := routes.WorkspaceHandler{Repo: repo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
+		app.Delete("/workspaces/:workspaceid", handler.DeleteWorkspace)
 
-	app := fiber.New()
-	app.Post("/workspaces", handler.CreateWorkspace)
+		repo.On("GetWorkspaceByID", mock.Anything, "ws-123").Return(db.Workspace{ID: "ws-123", OwnerID: "user-123"}, nil)
+		repo.On("DeleteWorkspace", mock.Anything, "ws-123").Return(nil)
 
-	payload := map[string]string{"name": "Test Workspace"}
-	body, _ := json.Marshal(payload)
+		req := httptest.NewRequest(http.MethodDelete, "/workspaces/ws-123", nil)
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+	})
 
-	req := httptest.NewRequest(http.MethodPost, "/workspaces", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
+	t.Run("WorkSpace ID is not provided", func(t *testing.T) {
+		repo := new(mocks.MockWorkspaceRepo)
+		handler := routes.WorkspaceHandler{Repo: repo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
+		app.Delete("/workspaces/:workspaceid", handler.DeleteWorkspace)
 
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
+		req := httptest.NewRequest(http.MethodDelete, "/workspaces/undefined", nil)
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("Not found WorkSpace", func(t *testing.T) {
+		repo := new(mocks.MockWorkspaceRepo)
+		handler := routes.WorkspaceHandler{Repo: repo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
+		app.Delete("/workspaces/:workspaceid", handler.DeleteWorkspace)
+
+		repo.On("GetWorkspaceByID", mock.Anything, "ws-123").Return(db.Workspace{}, errors.New("not found"))
+
+		req := httptest.NewRequest(http.MethodDelete, "/workspaces/ws-123", nil)
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
+	})
+
+	t.Run("User Request is not Owner of WorkSpace", func(t *testing.T) {
+		repo := new(mocks.MockWorkspaceRepo)
+		handler := routes.WorkspaceHandler{Repo: repo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
+		app.Delete("/workspaces/:workspaceid", handler.DeleteWorkspace)
+
+		repo.On("GetWorkspaceByID", mock.Anything, "ws-123").Return(db.Workspace{ID: "ws-123", OwnerID: "user-456"}, nil)
+
+		req := httptest.NewRequest(http.MethodDelete, "/workspaces/ws-123", nil)
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusForbidden, resp.StatusCode)
+	})
+
+	t.Run("Delete WorkSpace failed", func(t *testing.T) {
+		repo := new(mocks.MockWorkspaceRepo)
+		handler := routes.WorkspaceHandler{Repo: repo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
+		app.Delete("/workspaces/:workspaceid", handler.DeleteWorkspace)
+
+		repo.On("GetWorkspaceByID", mock.Anything, "ws-123").Return(db.Workspace{ID: "ws-123", OwnerID: "user-123"}, nil)
+		repo.On("DeleteWorkspace", mock.Anything, "ws-123").Return(errors.New("failed to delete workspace"))
+
+		req := httptest.NewRequest(http.MethodDelete, "/workspaces/ws-123", nil)
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
+	})
 }
 
-func TestCreateWorkspace_ValidationError(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := routes.WorkspaceHandler{Repo: repo}
+func TestUpdateWorkSpace(t *testing.T) {
+	t.Run("Update name workspace successfully", func(t *testing.T) {
+		repo := new(mocks.MockWorkspaceRepo)
+		handler := routes.WorkspaceHandler{Repo: repo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
 
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Post("/workspaces", handler.CreateWorkspace)
+		app.Put("/workspaces/:workspaceid", handler.UpdateWorkspace)
 
-	payload := map[string]string{"name": ""}
-	body, _ := json.Marshal(payload)
+		body := []byte(`{
+		"name": "New Workspace Name"
+		}`)
 
-	req := httptest.NewRequest(http.MethodPost, "/workspaces", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
+		repo.On("GetWorkspaceByID", mock.Anything, "ws-123").
+			Return(db.Workspace{ID: "ws-123", OwnerID: "user-123"}, nil)
 
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
-}
+		repo.On("RenameWorkspace", mock.Anything, "ws-123", "New Workspace Name").
+			Return(nil)
 
-func TestCreateWorkspace_CreateWorkspaceFail(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := routes.WorkspaceHandler{Repo: repo}
+		req := httptest.NewRequest(http.MethodPut, "/workspaces/ws-123", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
 
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Post("/workspaces", handler.CreateWorkspace)
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-	payload := map[string]string{"name": "Test Workspace"}
-	body, _ := json.Marshal(payload)
-
-	repo.On("CreateWorkspace", mock.Anything, mock.Anything, "Test Workspace", "user-123").Return(errors.New("db error"))
+		respBody, _ := io.ReadAll(resp.Body)
+		assert.Contains(t, string(respBody), `"message":"workspace updated successfully"`)
+	})
 
-	req := httptest.NewRequest(http.MethodPost, "/workspaces", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
+	t.Run("Update name workspace failed", func(t *testing.T) {
+		repo := new(mocks.MockWorkspaceRepo)
+		handler := routes.WorkspaceHandler{Repo: repo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
 
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
-}
+		app.Put("/workspaces/:workspaceid", handler.UpdateWorkspace)
+		body := []byte(`{
+		"name": "New Workspace Name"
+		}`)
 
-func TestCreateWorkspace_AddMemberFail(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := routes.WorkspaceHandler{Repo: repo}
+		repo.On("GetWorkspaceByID", mock.Anything, "ws-123").
+			Return(db.Workspace{ID: "ws-123", OwnerID: "user-123"}, nil)
 
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Post("/workspaces", handler.CreateWorkspace)
+		repo.On("RenameWorkspace", mock.Anything, "ws-123", "New Workspace Name").
+			Return(errors.New("failed to rename workspace"))
 
-	payload := map[string]string{"name": "Test Workspace"}
-	body, _ := json.Marshal(payload)
+		req := httptest.NewRequest(http.MethodPut, "/workspaces/ws-123", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
 
-	repo.On("CreateWorkspace", mock.Anything, mock.Anything, "Test Workspace", "user-123").Return(nil)
-	repo.On("AddMemberToWorkspace", mock.Anything, mock.Anything, "user-123").Return(errors.New("add member error"))
-
-	req := httptest.NewRequest(http.MethodPost, "/workspaces", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
 
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
-}
-
-func TestGetWorkspacesByUserID_Success(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
-
-	expected := []db.ListWorkspacesWithMembersByUserIDRow{
-		{ID: "w1", Name: "Workspace 1"},
-		{ID: "w2", Name: "Workspace 2"},
-	}
-
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Get("/workspaces", handler.GetWorkspacesByUserID)
-
-	repo.On("ListWorkspacesWithMembersByUserID", mock.Anything, "user-123").Return(expected, nil)
-
-	req := httptest.NewRequest(http.MethodGet, "/workspaces", nil)
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
-}
-
-func TestGetWorkspacesByUserID_MissingUserID(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
-
-	app := fiber.New()
-	app.Get("/workspaces", handler.GetWorkspacesByUserID)
-
-	req := httptest.NewRequest(http.MethodGet, "/workspaces", nil)
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
-}
-
-func TestGetWorkspacesByUserID_RepoError(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
-
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Get("/workspaces", handler.GetWorkspacesByUserID)
-
-	repo.On("ListWorkspacesWithMembersByUserID", mock.Anything, "user-123").Return(nil, errors.New("db fail"))
-
-	req := httptest.NewRequest(http.MethodGet, "/workspaces", nil)
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
-}
-
-func TestDeleteWorkspace_WorkspaceIDRequired(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
-
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Delete("/workspaces/:workspaceid?", handler.DeleteWorkspace)
-
-	req := httptest.NewRequest(http.MethodDelete, "/workspaces/", nil)
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
-}
-
-func TestDeleteWorkspace_Unauthorized(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
-
-	app := fiber.New()
-	app.Delete("/workspaces/:workspaceid", handler.DeleteWorkspace)
-
-	req := httptest.NewRequest(http.MethodDelete, "/workspaces/ws-123", nil)
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
-}
-
-func TestDeleteWorkspace_WorkspaceNotFound(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
-
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Delete("/workspaces/:workspaceid", handler.DeleteWorkspace)
-
-	repo.On("GetWorkspaceByID", mock.Anything, "ws-123").
-		Return(db.Workspace{}, errors.New("not found"))
-
-	req := httptest.NewRequest(http.MethodDelete, "/workspaces/ws-123", nil)
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
-}
-
-func TestDeleteWorkspace_Forbidden(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
-
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Delete("/workspaces/:workspaceid", handler.DeleteWorkspace)
-
-	ws := db.Workspace{ID: "ws-123", OwnerID: "user-999"}
-	repo.On("GetWorkspaceByID", mock.Anything, "ws-123").
-		Return(ws, nil)
-
-	req := httptest.NewRequest(http.MethodDelete, "/workspaces/ws-123", nil)
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusForbidden, resp.StatusCode)
-}
-
-func TestDeleteWorkspace_DeleteFailed(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
-
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Delete("/workspaces/:workspaceid", handler.DeleteWorkspace)
-
-	ws := db.Workspace{ID: "ws-123", OwnerID: "user-123"}
-	repo.On("GetWorkspaceByID", mock.Anything, "ws-123").Return(ws, nil)
-	repo.On("DeleteWorkspace", mock.Anything, "ws-123").Return(errors.New("delete failed"))
-
-	req := httptest.NewRequest(http.MethodDelete, "/workspaces/ws-123", nil)
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
-}
-
-func TestDeleteWorkspace_Success(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
-
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Delete("/workspaces/:workspaceid", handler.DeleteWorkspace)
-
-	ws := db.Workspace{ID: "ws-123", OwnerID: "user-123"}
-	repo.On("GetWorkspaceByID", mock.Anything, "ws-123").Return(ws, nil)
-	repo.On("DeleteWorkspace", mock.Anything, "ws-123").Return(nil)
-
-	req := httptest.NewRequest(http.MethodDelete, "/workspaces/ws-123", nil)
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
-}
-
-func TestAddMemberToWorkspace_WorkspaceIDRequired(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
-
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Post("/workspaces/:workspaceid/members", handler.AddMemberToWorkspace)
-
-	req := httptest.NewRequest(http.MethodPost, "/workspaces/empty/members", nil)
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
-}
+		respBody, _ := io.ReadAll(resp.Body)
+		assert.Contains(t, string(respBody), `"error":"failed to rename workspace"`)
 
-func TestAddMemberToWorkspace_Unauthorized(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
+	})
 
-	app := fiber.New()
-	app.Post("/workspaces/:workspaceid/members", handler.AddMemberToWorkspace)
+	t.Run("Add Member to Workspace successfully", func(t *testing.T) {
+		repo := new(mocks.MockWorkspaceRepo)
+		handler := routes.WorkspaceHandler{Repo: repo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
 
-	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members", nil)
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
-}
+		app.Put("/workspaces/:workspaceid", handler.UpdateWorkspace)
+		body := []byte(`{
+		"add_members": ["user-456", "user-789"]
+		}`)
 
-func TestAddMemberToWorkspace_WorkspaceNotFound(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
+		repo.On("GetWorkspaceByID", mock.Anything, "ws-123").
+			Return(db.Workspace{ID: "ws-123", OwnerID: "user-123"}, nil)
 
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Post("/workspaces/:workspaceid/members", handler.AddMemberToWorkspace)
+		repo.On("AddMemberToWorkspace", mock.Anything, "ws-123", "user-456").Return(nil)
+		repo.On("AddMemberToWorkspace", mock.Anything, "ws-123", "user-789").Return(nil)
 
-	repo.On("GetWorkspaceByID", mock.Anything, "ws-1").Return(db.Workspace{}, errors.New("not found"))
+		req := httptest.NewRequest(http.MethodPut, "/workspaces/ws-123", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
 
-	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members", strings.NewReader(`{"user_id":"user-456"}`))
-	req.Header.Set("Content-Type", "application/json")
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
-}
+		respBody, _ := io.ReadAll(resp.Body)
+		assert.Contains(t, string(respBody), `"message":"workspace updated successfully"`)
+	})
 
-func TestAddMemberToWorkspace_Forbidden(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
+	t.Run("Failed to Add Member to Workspace successfully", func(t *testing.T) {
+		repo := new(mocks.MockWorkspaceRepo)
+		handler := routes.WorkspaceHandler{Repo: repo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
 
-	ws := db.Workspace{ID: "ws-1", OwnerID: "user-999"}
+		app.Put("/workspaces/:workspaceid", handler.UpdateWorkspace)
+		body := []byte(`{
+		"add_members": ["user-456", "user-789"]
+		}`)
 
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Post("/workspaces/:workspaceid/members", handler.AddMemberToWorkspace)
+		repo.On("GetWorkspaceByID", mock.Anything, "ws-123").
+			Return(db.Workspace{ID: "ws-123", OwnerID: "user-123"}, nil)
 
-	repo.On("GetWorkspaceByID", mock.Anything, "ws-1").Return(ws, nil)
+		repo.On("AddMemberToWorkspace", mock.Anything, "ws-123", "user-456").Return(errors.New("failed to add member to workspace"))
+		repo.On("AddMemberToWorkspace", mock.Anything, "ws-123", "user-789").Return(errors.New("failed to add member to workspace"))
 
-	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members", strings.NewReader(`{"user_id":"user-456"}`))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusForbidden, resp.StatusCode)
-}
+		req := httptest.NewRequest(http.MethodPut, "/workspaces/ws-123", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
 
-func TestAddMemberToWorkspace_BadRequest_EmptyUserID(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
 
-	ws := db.Workspace{ID: "ws-1", OwnerID: "user-123"}
+		respBody, _ := io.ReadAll(resp.Body)
+		assert.Contains(t, string(respBody), `"error":"failed to add member to workspace"`)
 
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Post("/workspaces/:workspaceid/members", handler.AddMemberToWorkspace)
+	})
 
-	repo.On("GetWorkspaceByID", mock.Anything, "ws-1").Return(ws, nil)
+	t.Run("Remove Member from Workspace successfully", func(t *testing.T) {
+		repo := new(mocks.MockWorkspaceRepo)
+		handler := routes.WorkspaceHandler{Repo: repo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
 
-	// Missing user_id in body
-	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members", strings.NewReader(`{}`))
-	req.Header.Set("Content-Type", "application/json")
+		app.Put("/workspaces/:workspaceid", handler.UpdateWorkspace)
+		body := []byte(`{
+		"remove_members": ["user-456", "user-789"]
+		}`)
 
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
-}
+		repo.On("GetWorkspaceByID", mock.Anything, "ws-123").
+			Return(db.Workspace{ID: "ws-123", OwnerID: "user-123"}, nil)
 
-func TestAddMemberToWorkspace_AddMemberFail(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
+		repo.On("RemoveMemberFromWorkspace", mock.Anything, "ws-123", "user-456").Return(nil)
+		repo.On("RemoveMemberFromWorkspace", mock.Anything, "ws-123", "user-789").Return(nil)
 
-	ws := db.Workspace{ID: "ws-1", OwnerID: "user-123"}
+		req := httptest.NewRequest(http.MethodPut, "/workspaces/ws-123", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
 
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Post("/workspaces/:workspaceid/members", handler.AddMemberToWorkspace)
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-	repo.On("GetWorkspaceByID", mock.Anything, "ws-1").Return(ws, nil)
-	repo.On("AddMemberToWorkspace", mock.Anything, "ws-1", "user-456").Return(errors.New("fail add"))
+		respBody, _ := io.ReadAll(resp.Body)
+		assert.Contains(t, string(respBody), `"message":"workspace updated successfully"`)
+	})
 
-	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members", strings.NewReader(`{"member_id":"user-456"}`))
-	req.Header.Set("Content-Type", "application/json")
+	t.Run("Failed to Remove Member from Workspace successfully", func(t *testing.T) {
+		repo := new(mocks.MockWorkspaceRepo)
+		handler := routes.WorkspaceHandler{Repo: repo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
 
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
-}
+		app.Put("/workspaces/:workspaceid", handler.UpdateWorkspace)
+		body := []byte(`{
+		"remove_members": ["user-456", "user-789"]
+		}`)
 
-func TestAddMemberToWorkspace_Success(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
+		repo.On("GetWorkspaceByID", mock.Anything, "ws-123").
+			Return(db.Workspace{ID: "ws-123", OwnerID: "user-123"}, nil)
 
-	ws := db.Workspace{ID: "ws-1", OwnerID: "user-123"}
+		repo.On("RemoveMemberFromWorkspace", mock.Anything, "ws-123", "user-456").Return(errors.New("failed to remove member from workspace"))
+		repo.On("RemoveMemberFromWorkspace", mock.Anything, "ws-123", "user-789").Return(errors.New("failed to remove member from workspace"))
 
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Post("/workspaces/:workspaceid/members", handler.AddMemberToWorkspace)
+		req := httptest.NewRequest(http.MethodPut, "/workspaces/ws-123", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
 
-	repo.On("GetWorkspaceByID", mock.Anything, "ws-1").Return(ws, nil)
-	repo.On("AddMemberToWorkspace", mock.Anything, "ws-1", "user-456").Return(nil)
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
 
-	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members", strings.NewReader(`{"member_id":"user-456"}`))
-	req.Header.Set("Content-Type", "application/json")
+		respBody, _ := io.ReadAll(resp.Body)
+		assert.Contains(t, string(respBody), `"error":"failed to remove member from workspace"`)
+	})
 
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
-}
+	t.Run("WorkSpace ID not provided", func(t *testing.T) {
+		repo := new(mocks.MockWorkspaceRepo)
+		handler := routes.WorkspaceHandler{Repo: repo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
 
-func TestAddMemberToWorkspace_WorkspaceIDEmpty(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
+		app.Put("/workspaces/:workspaceid", handler.UpdateWorkspace)
 
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Post("/workspaces/:workspaceid/members", handler.AddMemberToWorkspace)
+		req := httptest.NewRequest(http.MethodPut, "/workspaces/undefined", nil)
+		req.Header.Set("Content-Type", "application/json")
 
-	req := httptest.NewRequest(http.MethodPost, "/workspaces/empty/members", strings.NewReader(`{"user_id":"user-456"}`))
-	req.Header.Set("Content-Type", "application/json")
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
-}
+	})
 
-func TestRemoveMemberFromWorkspace_WorkspaceIDRequired(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
+	t.Run("Not Found WorkSpace", func(t *testing.T) {
+		repo := new(mocks.MockWorkspaceRepo)
+		handler := routes.WorkspaceHandler{Repo: repo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
 
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Post("/workspaces/:workspaceid/members", handler.RemoveMemberFromWorkspace)
+		app.Put("/workspaces/:workspaceid", handler.UpdateWorkspace)
 
-	req := httptest.NewRequest(http.MethodPost, "/workspaces/empty/members", strings.NewReader(`{"user_id":"user-456"}`))
-	req.Header.Set("Content-Type", "application/json")
+		req := httptest.NewRequest(http.MethodPut, "/workspaces/ws-123", nil)
+		req.Header.Set("Content-Type", "application/json")
 
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
-}
+		repo.On("GetWorkspaceByID", mock.Anything, "ws-123").Return(db.Workspace{}, errors.New("workspace not found"))
 
-func TestRemoveMemberFromWorkspace_Unauthorized(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
+	})
 
-	app := fiber.New()
-	app.Post("/workspaces/:workspaceid/members", handler.RemoveMemberFromWorkspace)
+	t.Run("Request User Is Not Workspace Owner", func(t *testing.T) {
+		repo := new(mocks.MockWorkspaceRepo)
+		handler := routes.WorkspaceHandler{Repo: repo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
 
-	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members", strings.NewReader(`{"user_id":"user-456"}`))
-	req.Header.Set("Content-Type", "application/json")
+		app.Put("/workspaces/:workspaceid", handler.UpdateWorkspace)
 
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
-}
+		req := httptest.NewRequest(http.MethodPut, "/workspaces/ws-123", nil)
+		req.Header.Set("Content-Type", "application/json")
 
-func TestRemoveMemberFromWorkspace_WorkspaceNotFound(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
+		repo.On("GetWorkspaceByID", mock.Anything, "ws-123").Return(db.Workspace{ID: "ws-123", OwnerID: "user-456"}, nil)
 
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Post("/workspaces/:workspaceid/members", handler.RemoveMemberFromWorkspace)
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusForbidden, resp.StatusCode)
+	})
 
-	repo.On("GetWorkspaceByID", mock.Anything, "ws-1").Return(db.Workspace{}, errors.New("not found"))
+	t.Run("Invalid JSON body", func(t *testing.T) {
+		repo := new(mocks.MockWorkspaceRepo)
+		handler := routes.WorkspaceHandler{Repo: repo}
+		app := fiber.New()
+		app.Use(withUserID("user-123"))
+		app.Put("/workspaces/:workspaceid", handler.UpdateWorkspace)
 
-	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members", strings.NewReader(`{"user_id":"user-456"}`))
-	req.Header.Set("Content-Type", "application/json")
+		body := []byte(`{
+		"name": "new name",
+		}`) 
 
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
-}
+		repo.On("GetWorkspaceByID", mock.Anything, "ws-123").
+			Return(db.Workspace{ID: "ws-123", OwnerID: "user-123"}, nil)
 
-func TestRemoveMemberFromWorkspace_Forbidden(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
+		req := httptest.NewRequest(http.MethodPut, "/workspaces/ws-123", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
 
-	ws := db.Workspace{ID: "ws-1", OwnerID: "user-999"}
+		resp, err := app.Test(req, -1)
+		assert.NoError(t, err)
+		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Post("/workspaces/:workspaceid/members", handler.RemoveMemberFromWorkspace)
+		res, _ := io.ReadAll(resp.Body)
+		assert.Contains(t, string(res), `"error":"invalid request body"`)
+	})
 
-	repo.On("GetWorkspaceByID", mock.Anything, "ws-1").Return(ws, nil)
-
-	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members", strings.NewReader(`{"user_id":"user-456"}`))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusForbidden, resp.StatusCode)
-}
-
-func TestRemoveMemberFromWorkspace_BadRequest_EmptyUserID(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
-
-	ws := db.Workspace{ID: "ws-1", OwnerID: "user-123"}
-
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Post("/workspaces/:workspaceid/members/remove", handler.RemoveMemberFromWorkspace)
-
-	repo.On("GetWorkspaceByID", mock.Anything, "ws-1").Return(ws, nil)
-
-	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members/remove", strings.NewReader(`{}`))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
-}
-
-func TestRemoveMemberFromWorkspace_RemoveMemberFail(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
-
-	ws := db.Workspace{ID: "ws-1", OwnerID: "user-123"}
-
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Post("/workspaces/:workspaceid/members/remove", handler.RemoveMemberFromWorkspace)
-
-	repo.On("GetWorkspaceByID", mock.Anything, "ws-1").Return(ws, nil)
-	repo.On("RemoveMemberFromWorkspace", mock.Anything, "ws-1", "user-456").Return(errors.New("fail remove"))
-
-	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members/remove", strings.NewReader(`{"member_id":"user-456"}`))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
-}
-
-func TestRemoveMemberFromWorkspace_Success(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
-
-	ws := db.Workspace{ID: "ws-1", OwnerID: "user-123"}
-
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Post("/workspaces/:workspaceid/members/remove", handler.RemoveMemberFromWorkspace)
-
-	repo.On("GetWorkspaceByID", mock.Anything, "ws-1").Return(ws, nil)
-	repo.On("RemoveMemberFromWorkspace", mock.Anything, "ws-1", "user-456").Return(nil)
-
-	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/members/remove", strings.NewReader(`{"member_id":"user-456"}`))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
-}
-
-func TestRenameWorkSpace_WorkspaceIDRequired(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
-
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Put("/workspaces/:workspaceid/rename", handler.RenameWorkSpace)
-
-	req := httptest.NewRequest(http.MethodPut, "/workspaces/empty/rename", strings.NewReader(`{"name":"New Name"}`))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
-}
-
-func TestRenameWorkSpace_Unauthorized(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
-
-	app := fiber.New()
-	app.Put("/workspaces/:workspaceid/rename", handler.RenameWorkSpace)
-
-	req := httptest.NewRequest(http.MethodPut, "/workspaces/ws-1/rename", strings.NewReader(`{"name":"New Name"}`))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
-}
-
-func TestRenameWorkSpace_WorkspaceNotFound(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
-
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Put("/workspaces/:workspaceid/rename", handler.RenameWorkSpace)
-
-	repo.On("GetWorkspaceByID", mock.Anything, "ws-1").Return(db.Workspace{}, errors.New("not found"))
-
-	req := httptest.NewRequest(http.MethodPut, "/workspaces/ws-1/rename", strings.NewReader(`{"name":"New Name"}`))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
-}
-
-func TestRenameWorkSpace_Forbidden(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
-
-	ws := db.Workspace{ID: "ws-1", OwnerID: "user-999"}
-
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Put("/workspaces/:workspaceid/rename", handler.RenameWorkSpace)
-
-	repo.On("GetWorkspaceByID", mock.Anything, "ws-1").Return(ws, nil)
-
-	req := httptest.NewRequest(http.MethodPut, "/workspaces/ws-1/rename", strings.NewReader(`{"name":"New Name"}`))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusForbidden, resp.StatusCode)
-}
-
-func TestRenameWorkSpace_BadRequest_NameRequired(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
-
-	ws := db.Workspace{ID: "ws-1", OwnerID: "user-123"}
-
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Put("/workspaces/:workspaceid/rename", handler.RenameWorkSpace)
-
-	repo.On("GetWorkspaceByID", mock.Anything, "ws-1").Return(ws, nil)
-
-	req := httptest.NewRequest(http.MethodPut, "/workspaces/ws-1/rename", strings.NewReader(`{"name":""}`))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
-}
-
-func TestRenameWorkSpace_RenameFail(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
-
-	ws := db.Workspace{ID: "ws-1", OwnerID: "user-123"}
-
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Put("/workspaces/:workspaceid/rename", handler.RenameWorkSpace)
-
-	repo.On("GetWorkspaceByID", mock.Anything, "ws-1").Return(ws, nil)
-	repo.On("RenameWorkspace", mock.Anything, "ws-1", "New Name").Return(errors.New("fail rename"))
-
-	req := httptest.NewRequest(http.MethodPut, "/workspaces/ws-1/rename", strings.NewReader(`{"name":"New Name"}`))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
-}
-
-func TestRenameWorkSpace_Success(t *testing.T) {
-	repo := new(mocks.MockWorkspaceRepo)
-	handler := &routes.WorkspaceHandler{Repo: repo}
-
-	ws := db.Workspace{ID: "ws-1", OwnerID: "user-123"}
-
-	app := fiber.New()
-	app.Use(withUserID("user-123"))
-	app.Put("/workspaces/:workspaceid/rename", handler.RenameWorkSpace)
-
-	repo.On("GetWorkspaceByID", mock.Anything, "ws-1").Return(ws, nil)
-	repo.On("RenameWorkspace", mock.Anything, "ws-1", "New Name").Return(nil)
-
-	req := httptest.NewRequest(http.MethodPut, "/workspaces/ws-1/rename", strings.NewReader(`{"name":"New Name"}`))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 }
