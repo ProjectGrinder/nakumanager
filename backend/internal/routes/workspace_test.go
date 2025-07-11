@@ -194,7 +194,9 @@ func TestGetWorkspaceByUserID(t *testing.T) {
 		app.Use(withUserID("user-123"))
 		app.Get("/workspaces", handler.GetWorkspacesByUserID)
 
-		repo.On("ListWorkspacesWithMembersByUserID", mock.Anything, "user-123").Return(nil, errors.New("fail to get workspace by user id"))
+		var emptyResult []db.ListWorkspacesWithMembersByUserIDRow = nil
+		repo.On("ListWorkspacesWithMembersByUserID", mock.Anything, "user-123").
+			Return(emptyResult, errors.New("fail to get workspace by user id"))
 
 		req := httptest.NewRequest(http.MethodGet, "/workspaces", nil)
 		resp, err := app.Test(req, -1)
@@ -514,7 +516,7 @@ func TestUpdateWorkSpace(t *testing.T) {
 
 		body := []byte(`{
 		"name": "new name",
-		}`) 
+		}`)
 
 		repo.On("GetWorkspaceByID", mock.Anything, "ws-123").
 			Return(db.Workspace{ID: "ws-123", OwnerID: "user-123"}, nil)
