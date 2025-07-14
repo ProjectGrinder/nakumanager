@@ -166,11 +166,12 @@ func (h *TeamHandler) UpdateTeam(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "team not found"})
 	}
 
+	if owner != userID && leader != userID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "no permission to remove member from this team"})
+	}
+
 	// Rename team
 	if req.Name != nil {
-		if owner != userID && leader != userID {
-			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "no permission to rename team"})
-		}
 		if err := h.Repo.RenameTeam(ctx, db.RenameTeamParams{ID: teamID, Name: *req.Name}); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to rename team"})
 		}
@@ -178,9 +179,6 @@ func (h *TeamHandler) UpdateTeam(c *fiber.Ctx) error {
 
 	// Add members
 	if req.AddMembers != nil {
-		if owner != userID && leader != userID {
-			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "no permission to add members"})
-		}
 		for _, memberID := range *req.AddMembers {
 			exists, err := h.Repo.IsMemberInTeam(ctx, teamID, memberID)
 			if err != nil {
@@ -197,9 +195,6 @@ func (h *TeamHandler) UpdateTeam(c *fiber.Ctx) error {
 
 	// Remove members
 	if req.RemoveMembers != nil {
-		if owner != userID && leader != userID {
-			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "no permission to remove members"})
-		}
 		for _, memberID := range *req.RemoveMembers {
 			if err := h.Repo.RemoveMemberFromTeam(ctx, db.RemoveMemberFromTeamParams{TeamID: teamID, UserID: memberID}); err != nil {
 				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to remove member"})
@@ -209,9 +204,6 @@ func (h *TeamHandler) UpdateTeam(c *fiber.Ctx) error {
 
 	// Set new leader
 	if req.NewLeaderID != nil {
-		if owner != userID {
-			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "only owner can set team leader"})
-		}
 		exists, err := h.Repo.IsMemberInTeam(ctx, teamID, *req.NewLeaderID)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to check if user is member"})

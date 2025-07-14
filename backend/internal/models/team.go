@@ -7,7 +7,7 @@ type CreateTeam struct {
 }
 
 type UpdateTeamRequest struct {
-	Name          *string   `json:"Name"`
+	Name          *string   `json:"name"`
 	AddMembers    *[]string `json:"add_members"`
 	RemoveMembers *[]string `json:"remove_members"`
 	NewLeaderID   *string   `json:"new_leader_id"`
