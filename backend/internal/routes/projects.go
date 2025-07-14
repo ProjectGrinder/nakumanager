@@ -2,12 +2,8 @@ package routes
 
 import (
 	"database/sql"
-	"errors"
-	"fmt"
-	"log"
 	"strings"
 
-	"github.com/go-playground/validator"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	models "github.com/nack098/nakumanager/internal/models"
@@ -36,17 +32,11 @@ func (h *ProjectHandler) CreateProject(c *fiber.Ctx) error {
 	}
 
 	// Check if the user is authenticated
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
+	userID := c.Locals("userID").(string)
 
 	// ตรวจสอบทีมมีอยู่จริงและอยู่ใน workspace เดียวกัน
 	team, err := h.TeamRepo.GetTeamByID(c.Context(), body.TeamID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "team not found"})
-		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to check team"})
 	}
 
@@ -70,15 +60,6 @@ func (h *ProjectHandler) CreateProject(c *fiber.Ctx) error {
 	}
 	body.CreatedBy = userID
 
-	// Validate required fields
-	if err := validate.Struct(body); err != nil {
-		var errors []string
-		for _, err := range err.(validator.ValidationErrors) {
-			errors = append(errors, fmt.Sprintf("Field '%s' is %s", err.Field(), err.Tag()))
-		}
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "validation failed", "details": errors})
-	}
-
 	// สร้างโปรเจกต์
 	if err := h.Repo.CreateProject(c.Context(), body); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
@@ -89,7 +70,7 @@ func (h *ProjectHandler) CreateProject(c *fiber.Ctx) error {
 
 func (h *ProjectHandler) UpdateProject(c *fiber.Ctx) error {
 	projectID := c.Params("id")
-	if projectID == "" {
+	if projectID == "" || projectID == "undefined" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing project ID"})
 	}
 
@@ -98,11 +79,7 @@ func (h *ProjectHandler) UpdateProject(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
 	}
 
-	// ตรวจสอบสิทธิ์ผู้ใช้
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
+	userID := c.Locals("userID").(string)
 
 	// ตรวจสอบงาสคนที่แก้ไขคือ Owner ไม่ก็ Leader
 	owner, err := h.Repo.GetOwnerByProjectID(c.Context(), projectID)
@@ -122,9 +99,6 @@ func (h *ProjectHandler) UpdateProject(c *fiber.Ctx) error {
 	// ตรวจสอบว่า project มีอยู่จริง
 	_, err = h.Repo.GetProjectByID(c.Context(), projectID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "project not found"})
-		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to fetch project"})
 	}
 
@@ -144,7 +118,6 @@ func (h *ProjectHandler) UpdateProject(c *fiber.Ctx) error {
 	}
 
 	if _, err := h.DB.ExecContext(c.Context(), query, args...); err != nil {
-		log.Println("Update failed:", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update project"})
 	}
 
@@ -152,16 +125,11 @@ func (h *ProjectHandler) UpdateProject(c *fiber.Ctx) error {
 }
 
 func (h *ProjectHandler) GetProjectsByUserID(c *fiber.Ctx) error {
-	// ตรวจสอบสิทธิ์
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
+	userID := c.Locals("userID").(string)
 
 	// ดึงโปรเจกต์
 	projects, err := h.Repo.GetProjectsByUserID(c.Context(), userID)
 	if err != nil {
-		log.Println("Error fetching projects by user ID:", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to fetch projects"})
 	}
 
@@ -171,23 +139,16 @@ func (h *ProjectHandler) GetProjectsByUserID(c *fiber.Ctx) error {
 func (h *ProjectHandler) DeleteProject(c *fiber.Ctx) error {
 	// ตรวจสอบ param
 	projectID := c.Params("id")
-	if strings.TrimSpace(projectID) == "" {
+	if strings.TrimSpace(projectID) == "" || projectID == "undefined" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "project_id is required"})
 	}
 
 	// ตรวจสอบสิทธิ์
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
+	userID := c.Locals("userID").(string)
 
 	// ตรวจสอบว่า project มีอยู่
 	project, err := h.Repo.GetProjectByID(c.Context(), projectID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "project not found"})
-		}
-		log.Println("Error fetching project:", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to fetch project"})
 	}
 
@@ -198,7 +159,6 @@ func (h *ProjectHandler) DeleteProject(c *fiber.Ctx) error {
 
 	// ลบ
 	if err := h.Repo.DeleteProject(c.Context(), projectID); err != nil {
-		log.Println("Error deleting project:", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to delete project"})
 	}
 
