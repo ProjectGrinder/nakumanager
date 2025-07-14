@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/nack098/nakumanager/internal/db"
 	models "github.com/nack098/nakumanager/internal/models"
@@ -65,9 +66,17 @@ func (r *teamRepo) GetOwnerByTeamID(ctx context.Context, teamID string) (string,
 }
 
 func (r *teamRepo) GetLeaderByTeamID(ctx context.Context, teamID string) (string, error) {
-	// leader, err := r.queries.GetLeaderByTeamID(ctx, teamID)
-	// return leader, err
-	return "", nil
+	leaderInterface, err := r.queries.GetLeaderByTeamID(ctx, teamID)
+	if err != nil {
+		return "", err
+	}
+
+	leader, ok := leaderInterface.(string)
+	if !ok {
+		return "", fmt.Errorf("unexpected type for leader, want string")
+	}
+
+	return leader, nil
 }
 
 func (r *teamRepo) IsMemberInTeam(ctx context.Context, teamID, userID string) (bool, error) {

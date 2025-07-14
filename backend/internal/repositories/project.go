@@ -12,8 +12,6 @@ type ProjectRepository interface {
 	DeleteProject(ctx context.Context, id string) error
 	GetProjectByID(ctx context.Context, id string) (db.Project, error)
 	GetProjectsByUserID(ctx context.Context, userID string) ([]db.Project, error)
-	ListProjectMembers(ctx context.Context, projectID string) ([]db.User, error)
-	ListProjectsByWorkspace(ctx context.Context, workspaceID string) ([]db.ListProjectsByWorkspaceRow, error)
 	IsProjectExists(ctx context.Context, projectID string) (bool, error)
 	GetOwnerByProjectID(ctx context.Context, projectID string) (string, error)
 	GetLeaderByProjectID(ctx context.Context, projectID string) (string, error)
@@ -56,14 +54,6 @@ func (r *projectRepo) GetProjectByID(ctx context.Context, id string) (db.Project
 
 func (r *projectRepo) GetProjectsByUserID(ctx context.Context, userID string) ([]db.Project, error) {
 	return r.queries.GetProjectsByUserID(ctx, db.GetProjectsByUserIDParams{UserID: userID, CreatedBy: userID})
-}
-
-func (r *projectRepo) ListProjectMembers(ctx context.Context, projectID string) ([]db.User, error) {
-	return r.queries.ListProjectMembers(ctx, projectID)
-}
-
-func (r *projectRepo) ListProjectsByWorkspace(ctx context.Context, workspaceID string) ([]db.ListProjectsByWorkspaceRow, error) {
-	return r.queries.ListProjectsByWorkspace(ctx, workspaceID)
 }
 
 func (r *projectRepo) IsProjectExists(ctx context.Context, projectID string) (bool, error) {
