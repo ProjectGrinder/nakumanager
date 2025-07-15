@@ -68,7 +68,7 @@ export default function ProjectInfo() {
       },
     },
   };
-  function progress(total: number, completed: number) {
+  const progress = (total: number, completed: number) => {
     if (completed == 0)
       return <span className="text-base text-red-500">0%</span>;
     const percent = (completed / total) * 100;
@@ -91,11 +91,33 @@ export default function ProjectInfo() {
     if (percent >= 100)
       return <span className="text-base text-green-300">100%</span>;
     return <span className="text-base text-red-500">0%</span>;
-  }
+  };
+  const nameChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    if (e.target.value.length <= 0) {
+      return;
+    }
+    setName(e.target.value);
+  };
+
   return (
     <div className="flex flex-col items-start p-6">
       <div className="flex-row text-white text-xl font-bold mb-4">
-        <span>{project.name}</span>
+        <textarea
+          className="w-full resize-none overflow-hidden bg-transparent p-0 text-xl leading-snug focus:outline-none"
+          rows={1}
+          value={name}
+          onChange={nameChange}
+          onInput={(e) => {
+            const textarea = e.currentTarget;
+            textarea.style.height = "auto";
+            textarea.style.width = "auto";
+            textarea.style.height = textarea.scrollHeight + "px";
+            textarea.style.width = textarea.scrollWidth + "px";
+          }}
+          spellCheck={false}
+          autoCorrect="off"
+          autoCapitalize="off"
+        ></textarea>
       </div>
       <div className="flex flex-col font-normal">
         <div className="flex flex-row gap-2 items-center">
