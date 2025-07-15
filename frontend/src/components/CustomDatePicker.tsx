@@ -42,6 +42,14 @@ export default function CustomDatePicker(props: DatePickerProps) {
   const pickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    setSelectedDate(props.value ?? null);
+    if (props.value) {
+      setCurrentMonth(props.value.getMonth());
+      setCurrentYear(props.value.getFullYear());
+    }
+  }, [props.value]);
+
+  useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
         setShowCalendar(false);
@@ -55,6 +63,7 @@ export default function CustomDatePicker(props: DatePickerProps) {
     const date = new Date(currentYear, currentMonth, day);
     setSelectedDate(date);
     setShowCalendar(false);
+    props.onChange(date);
   };
 
   const days = Array.from(
@@ -68,7 +77,7 @@ export default function CustomDatePicker(props: DatePickerProps) {
         onClick={() => setShowCalendar(!showCalendar)}
         className="px-3 py-1.5 rounded-lg bg-gray-700 text-gray-200 border-none"
       >
-        {selectedDate ? formatDisplayDate(selectedDate) : "Select date"}
+        {selectedDate ? formatDisplayDate(selectedDate) : "Select Date"}
       </button>
 
       {showCalendar && (

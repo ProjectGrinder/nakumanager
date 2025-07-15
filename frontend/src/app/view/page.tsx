@@ -1,10 +1,10 @@
-import WorkspaceBar from "@/components/WorkspaceBar";
+import Sidebar from "@/components/Sidebar";
 import ViewInfo from "@/components/view/ViewInfo";
 
 export default function ViewPage() {
   return (
     <div className="flex flex-row">
-      <WorkspaceBar />;
+      <Sidebar />;
       <ViewInfo />
     </div>
   );
