@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { FormControl, InputLabel, Select, MenuItem } from "@mui/material";
+import { useEffect, useRef, useState } from "react";
+import { FormControl, Select, MenuItem } from "@mui/material";
 import CustomAvatar from "../Avatar";
 import CustomDatePicker from "../CustomDatePicker";
 
@@ -103,7 +103,7 @@ export default function ProjectInfo() {
     <div className="flex flex-col items-start p-6">
       <div className="flex-row text-white text-xl font-bold mb-4">
         <textarea
-          className="w-full resize-none overflow-hidden bg-transparent p-0 text-xl leading-snug focus:outline-none"
+          className="resize-none overflow-hidden bg-transparent p-0 leading-snug focus:outline-none"
           rows={1}
           value={name}
           onChange={nameChange}
@@ -140,7 +140,7 @@ export default function ProjectInfo() {
           </FormControl>
         </div>
         <hr className="border-gray-500 mt-4 mb-4"></hr>
-        <div className="flex flex-row gap-4 items-center mb-4">
+        <div className="flex flex-row gap-6 items-center mb-4">
           <FormControl fullWidth sx={style}>
             <Select
               labelId="demo-simple-select-label"
