@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import DateFormat from "../DateFormat";
 import { FormControl, InputLabel, Select, MenuItem } from "@mui/material";
 import CustomAvatar from "../Avatar";
+import CustomDatePicker from "../CustomDatePicker";
 
 export default function ProjectInfo() {
   const project = {
@@ -11,8 +11,8 @@ export default function ProjectInfo() {
     status: "In Progress",
     priority: "High Priority",
     leader: "Alice",
-    startDate: "2024-01-01",
-    endDate: "2024-06-01",
+    startDate: new Date("2024-01-01"),
+    endDate: new Date("2024-06-01"),
     label: "AI",
     members: [
       ["Member 1", "Frontend"],
@@ -24,8 +24,8 @@ export default function ProjectInfo() {
   const [leader, setLeader] = useState(project.leader);
   const [status, setStatus] = useState(project.status);
   const [priority, setPriority] = useState(project.priority);
-  const [startDate, setStartDate] = useState(project.startDate);
-  const [endDate, setEndDate] = useState(project.endDate);
+  const [startDate, setStartDate] = useState<Date | null>(project.startDate);
+  const [endDate, setEndDate] = useState<Date | null>(project.endDate);
   const [label, setLabel] = useState(project.label);
   const style = {
     width: "auto",
@@ -206,19 +206,9 @@ export default function ProjectInfo() {
             </Select>
           </FormControl>
           <div>
-            <input
-              className="bg-gray-700 text-gray-200 text-sm px-2 py-1.5 rounded-lg outline-none appearance-none"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
+            <CustomDatePicker value={startDate} onChange={setStartDate} />
             <span className="mx-2 text-base text-gray-200">to</span>
-            <input
-              className="bg-gray-700 text-gray-200 text-sm px-2 py-1.5 rounded-lg outline-none appearance-none"
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
+            <CustomDatePicker value={endDate} onChange={setEndDate} />
           </div>
         </div>
         <div className="flex flex-row gap-2 items-center">
