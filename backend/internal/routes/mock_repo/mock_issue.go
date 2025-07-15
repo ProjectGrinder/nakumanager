@@ -48,10 +48,8 @@ func (m *MockIssueRepo) RemoveAssigneeFromIssue(ctx context.Context, data db.Rem
 
 func (m *MockIssueRepo) GetIssueByUserID(ctx context.Context, userID string) ([]db.Issue, error) {
 	args := m.Called(ctx, userID)
-	return args.Get(0).([]db.Issue), args.Error(1)
-}
-
-func (m *MockIssueRepo) UpdateIssue(ctx context.Context, params db.UpdateIssueParams) error {
-	args := m.Called(ctx, params)
-	return args.Error(0)
+	if data := args.Get(0); data != nil {
+		return data.([]db.Issue), args.Error(1)
+	}
+	return nil, args.Error(1)
 }

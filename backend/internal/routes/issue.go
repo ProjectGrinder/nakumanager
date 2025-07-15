@@ -36,10 +36,7 @@ func (h *IssueHandler) CreateIssue(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
-	}
+	userID := c.Locals("userID").(string)
 	issueReq.OwnerID = userID
 
 	if err := validator.New().Struct(&issueReq); err != nil {
@@ -144,18 +141,13 @@ func (h *IssueHandler) UpdateIssue(c *fiber.Ctx) error {
 	}
 
 	req.ID = c.Params("id")
-	if req.ID == "" {
+	if req.ID == "" || req.ID == "undefined" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "missing issue ID",
 		})
 	}
 
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "unauthorized",
-		})
-	}
+	userID := c.Locals("userID").(string)
 
 	ctx := c.Context()
 
@@ -246,18 +238,13 @@ func (h *IssueHandler) UpdateIssue(c *fiber.Ctx) error {
 
 func (h *IssueHandler) DeleteIssue(c *fiber.Ctx) error {
 	issue_id := c.Params("id")
-	if issue_id == "" {
+	if issue_id == "" || issue_id == "undefined" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "missing issue ID",
 		})
 	}
 
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "unauthorized",
-		})
-	}
+	userID := c.Locals("userID").(string)
 
 	ctx := c.Context()
 
@@ -299,12 +286,7 @@ func (h *IssueHandler) DeleteIssue(c *fiber.Ctx) error {
 }
 
 func (h *IssueHandler) GetIssuesByUserID(c *fiber.Ctx) error {
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "unauthorized",
-		})
-	}
+	userID := c.Locals("userID").(string)
 
 	issues, err := h.Repo.GetIssueByUserID(c.Context(), userID)
 	if err != nil {
