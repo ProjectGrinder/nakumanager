@@ -183,7 +183,7 @@ export default function ProjectInfo() {
               onChange={(e) => setPriority(e.target.value)}
               MenuProps={menuStyle}
             >
-              <MenuItem value={""}>
+              <MenuItem value={"No Priority"}>
                 <i className="fa-solid fa-circle-exclamation text-gray-200 text-sm mr-2"></i>
                 No Priority
               </MenuItem>
@@ -228,6 +228,7 @@ export default function ProjectInfo() {
             type="text"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
+            placeholder="None"
           />
         </div>
         <hr className="border-gray-500 mt-4 mb-4"></hr>
