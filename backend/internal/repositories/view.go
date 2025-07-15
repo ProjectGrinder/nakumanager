@@ -15,9 +15,6 @@ type ViewRepository interface {
 	CreateView(ctx context.Context, data db.CreateViewParams) error
 	DeleteView(ctx context.Context, id string) error
 	GetViewByID(ctx context.Context, id string) ([]db.View, error)
-	ListGroupByViewID(ctx context.Context, viewID string) ([]string, error)
-	ListIssuesByViewID(ctx context.Context, viewID string) ([]db.Issue, error)
-	ListViewsByUser(ctx context.Context, userID string) ([]db.View, error)
 	UpdateViewName(ctx context.Context, id string, name string) error
 	RemoveGroupByFromView(ctx context.Context, id string) error
 	RemoveIssueFromView(ctx context.Context, id string) error
@@ -48,7 +45,7 @@ func (r *viewRepo) AddIssueToView(ctx context.Context, data db.AddIssueToViewPar
 }
 
 func (r *viewRepo) AddIssueToViewTx(ctx context.Context, tx *sql.Tx, params db.AddIssueToViewParams) error {
-	q := db.New(tx) // ใช้ sqlc กับ transaction นี้
+	q := db.New(tx)
 	return q.AddIssueToView(ctx, params)
 }
 
@@ -62,18 +59,6 @@ func (r *viewRepo) DeleteView(ctx context.Context, id string) error {
 
 func (r *viewRepo) GetViewByID(ctx context.Context, viewId string) ([]db.View, error) {
 	return r.db.GetViewByID(ctx, viewId)
-}
-
-func (r *viewRepo) ListGroupByViewID(ctx context.Context, viewID string) ([]string, error) {
-	return r.db.ListGroupByViewID(ctx, viewID)
-}
-
-func (r *viewRepo) ListIssuesByViewID(ctx context.Context, viewID string) ([]db.Issue, error) {
-	return r.db.ListIssuesByViewID(ctx, viewID)
-}
-
-func (r *viewRepo) ListViewsByUser(ctx context.Context, userID string) ([]db.View, error) {
-	return r.db.ListViewsByUser(ctx, userID)
 }
 
 func (r *viewRepo) UpdateViewName(ctx context.Context, id string, name string) error {

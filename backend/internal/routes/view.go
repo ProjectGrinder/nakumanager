@@ -24,26 +24,6 @@ func NewViewHandler(db *sql.DB, repo repositories.ViewRepository) *ViewHandler {
 		Repo: repo}
 }
 
-func safeString(ns sql.NullString) string {
-	if ns.Valid {
-		return ns.String
-	}
-	return "null"
-}
-
-func isSafeColumn(col string) bool {
-	allowed := map[string]bool{
-		"status":     true,
-		"priority":   true,
-		"assignee":   true,
-		"project_id": true,
-		"label":      true,
-		"team_id":    true,
-		"end_date":   true,
-	}
-	return allowed[col]
-}
-
 func (h *ViewHandler) CreateView(c *fiber.Ctx) error {
 	var req models.CreateView
 	if err := c.BodyParser(&req); err != nil {
@@ -53,10 +33,7 @@ func (h *ViewHandler) CreateView(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "name and team_id are required"})
 	}
 
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
-	}
+	userID := c.Locals("userID").(string)
 
 	req.ID = uuid.New().String()
 	ctx := c.Context()
@@ -92,10 +69,7 @@ func (h *ViewHandler) CreateView(c *fiber.Ctx) error {
 		}
 	}
 
-	query, err := buildGroupByQuery("issues", req.GroupBys)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-	}
+	query, _ := BuildGroupByQuery("issues", req.GroupBys)
 
 	rows, err := h.DB.QueryContext(ctx, query, req.TeamID)
 	if err != nil {
@@ -144,11 +118,6 @@ func (h *ViewHandler) GetViewsByGroupBy(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "group_by is required"})
 	}
 
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
-	}
-
 	views, err := h.Repo.GetViewsByGroupBys(c.Context(), req.GroupBys)
 	if err != nil {
 		log.Printf("Failed to get views by group_by: %v", err)
@@ -161,16 +130,9 @@ func (h *ViewHandler) GetViewsByGroupBy(c *fiber.Ctx) error {
 func (h *ViewHandler) GetViewByTeamID(c *fiber.Ctx) error {
 	log.Println("GetViewByTeamID")
 	teamID := c.Params("id")
-	if teamID == "" {
+	if teamID == "" || teamID == "undefined" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body or missing team_id",
-		})
-	}
-
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Unauthorized",
 		})
 	}
 
@@ -187,16 +149,9 @@ func (h *ViewHandler) GetViewByTeamID(c *fiber.Ctx) error {
 
 func (h *ViewHandler) DeleteView(c *fiber.Ctx) error {
 	viewID := c.Params("id")
-	if viewID == "" {
+	if viewID == "" || viewID == "undefined" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body or missing view_id",
-		})
-	}
-
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Unauthorized",
 		})
 	}
 
@@ -231,7 +186,7 @@ func (h *ViewHandler) DeleteView(c *fiber.Ctx) error {
 
 func (h *ViewHandler) UpdateView(c *fiber.Ctx) error {
 	viewID := c.Params("id")
-	if viewID == "" {
+	if viewID == "" || viewID == "undefined" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body or missing view_id",
 		})
@@ -248,10 +203,7 @@ func (h *ViewHandler) UpdateView(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to get team_id"})
 	}
 
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
-	}
+	userID := c.Locals("userID").(string)
 
 	log.Printf("UserID: %s is updating ViewID: %s", userID, viewID)
 
@@ -324,11 +276,7 @@ func (h *ViewHandler) UpdateView(c *fiber.Ctx) error {
 			}
 		}
 
-		query, err := buildGroupByQuery("issues", req.GroupBys)
-		if err != nil {
-			log.Printf("Failed to build query: %v", err)
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-		}
+		query, _ := BuildGroupByQuery("issues", req.GroupBys)
 
 		log.Printf("Using team_id: %s", teamID)
 
