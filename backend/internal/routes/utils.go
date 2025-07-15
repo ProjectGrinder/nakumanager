@@ -129,7 +129,7 @@ func buildUpdateIssueQuery(i models.UpdateIssueRequest) (string, []interface{}) 
 	return query, args
 }
 
-func buildGroupByQuery(table string, groupBys []string) (string, error) {
+func BuildGroupByQuery(table string, groupBys []string) (string, error) {
 	validCols := map[string]bool{
 		"status": true, "priority": true, "project_id": true,
 		"label": true, "assignee": true, "team_id": true, "end_date": true,
