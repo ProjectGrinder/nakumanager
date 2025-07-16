@@ -1,3 +1,5 @@
+"use client";
+
 import MyIssue from "@/components/issue/MyIssue";
 import Sidebar from "@/components/Sidebar";
 

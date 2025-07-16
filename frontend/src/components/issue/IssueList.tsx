@@ -24,7 +24,7 @@ export default function IssueList() {
     ],
   ];
   return (
-    <div className="flex flex-col p-6 text-white w-9/10">
+    <div className="flex flex-col p-6 text-white w-4/5">
       <div className="flex flex-row items-center mb-4 gap-6">
         <span className="text-lg font-bold">All Issues</span>
         <button className="px-3 py-2 bg-blue-500 text-xs text-white rounded-md hover:bg-blue-700">

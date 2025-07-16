@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import SidebarButton from "./SidebarButton";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import CreateWorkspacePopup from "./popup/CreateWorkspacePopup";
 import CreateTeamPopup from "./popup/CreateTeamPopup";
 import ChangeWorkspacePopup from "./popup/ChangeWorkspacePopup";
@@ -11,7 +11,27 @@ export default function Sidebar(team: string) {
   const currentWorkspace = "Workspace 1";
   const teams = ["Team 1", "Team 2", "Team 3"];
   const [selectedTeam, setSelectedTeam] = useState(team);
+  const [popupNumber, setPopupNumber] = useState(0);
   const router = useRouter();
+  const [showSidePopup, setShowSidePopup] = useState(false);
+  const moreBtnRef = useRef<HTMLSpanElement>(null);
+  const sidePopupRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        sidePopupRef.current &&
+        !sidePopupRef.current.contains(event.target as Node) &&
+        moreBtnRef.current &&
+        !moreBtnRef.current.contains(event.target as Node)
+      ) {
+        setShowSidePopup(false);
+      }
+    }
+    if (showSidePopup) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showSidePopup]);
   const handleLogout = () => {
     router.push("/login");
   };
@@ -19,7 +39,6 @@ export default function Sidebar(team: string) {
     setSelectedTeam(currentTeam);
     router.push("/team");
   };
-  const [popupNumber, setPopupNumber] = useState(0);
   const handlePopupSubmit = (value: string) => {
     console.log(value);
   };
@@ -54,9 +73,38 @@ export default function Sidebar(team: string) {
       <div>
         <div className="flex flex-row items-center justify-between p-1 mb-2 text-gray-400 text-sm">
           <span className="max-w-45 truncate">{currentWorkspace}</span>
-          <span className="w-6 h-6 text-center rounded-xl cursor-pointer hover:bg-gray-600 transition duration-200">
+          <span
+            ref={moreBtnRef}
+            className="w-6 h-6 text-center rounded-xl cursor-pointer hover:bg-gray-600 transition duration-200"
+            onClick={() => setShowSidePopup(true)}
+          >
             ...
           </span>
+          {showSidePopup && (
+            <div
+              ref={sidePopupRef}
+              className="absolute left-full top-15 bg-gray-700 text-gray-200 rounded shadow-lg p-2 w-45 z-50"
+            >
+              <div
+                className="cursor-pointer hover:bg-gray-600 px-3 py-2 rounded transition duration-200"
+                onClick={() => {
+                  setPopupNumber(4);
+                  setShowSidePopup(false);
+                }}
+              >
+                Rename workspace
+              </div>
+              <div
+                className="cursor-pointer hover:bg-gray-600 px-3 py-2 rounded transition duration-200"
+                onClick={() => {
+                  setPopupNumber(5);
+                  setShowSidePopup(false);
+                }}
+              >
+                Delete workspace
+              </div>
+            </div>
+          )}
         </div>
         <div className="flex flex-col ml-4">
           <SidebarButton onClick={() => router.push("/workspace")}>
@@ -95,7 +143,7 @@ export default function Sidebar(team: string) {
                   <i className="fa-solid fa-bookmark text-xs mr-4 w-2"></i>
                   Issues
                 </SidebarButton>
-                <SidebarButton onClick={() => router.push("issue-list")}>
+                <SidebarButton onClick={() => router.push("view-list")}>
                   <i className="fa-solid fa-layer-group text-xs mr-4 w-2"></i>
                   Views
                 </SidebarButton>

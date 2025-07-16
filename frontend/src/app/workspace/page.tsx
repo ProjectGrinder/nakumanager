@@ -1,3 +1,5 @@
+"use client";
+
 import Sidebar from "@/components/Sidebar";
 import WorkspaceInfo from "@/components/WorkspaceInfo";
 
