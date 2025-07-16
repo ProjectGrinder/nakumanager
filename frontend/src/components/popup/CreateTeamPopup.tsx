@@ -13,7 +13,7 @@ export default function CreateTeamPopup(props: PopupProps) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="relative flex flex-col bg-gray-600 w-120 rounded-lg shadow-lg p-6">
+      <div className="relative flex flex-col bg-gray-700 w-120 rounded-lg shadow-lg p-6">
         <button
           onClick={props.onClose}
           className="absolute top-3 right-3.5 text-gray-200 hover:text-white text-2xl font-bold px-2"
