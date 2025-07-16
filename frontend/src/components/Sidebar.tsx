@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import SidebarButton from "./SidebarButton";
 import { useState } from "react";
 import CreateWorkspacePopup from "./CreateWorkspacePopup";
+import CreateTeamPopup from "./CreateTeamPopup";
 
 export default function Sidebar() {
   const currentWorkspace = "Workspace 1";
@@ -12,7 +13,8 @@ export default function Sidebar() {
   const handleLogout = () => {
     router.push("/login");
   };
-  const [showPopup, setShowPopup] = useState(false);
+  const [showCreateWorkspace, setShowCreateWorkspace] = useState(false);
+  const [showCreateTeam, setShowCreateTeam] = useState(false);
   const handlePopupSubmit = (value: string) => {
     console.log(value);
   };
@@ -29,8 +31,13 @@ export default function Sidebar() {
       </div>
       <hr className="border-gray-500 mb-2"></hr>
       <CreateWorkspacePopup
-        open={showPopup}
-        onClose={() => setShowPopup(false)}
+        open={showCreateWorkspace}
+        onClose={() => setShowCreateWorkspace(false)}
+        onSubmit={handlePopupSubmit}
+      />
+      <CreateTeamPopup
+        open={showCreateTeam}
+        onClose={() => setShowCreateTeam(false)}
         onSubmit={handlePopupSubmit}
       />
       <div>
@@ -41,7 +48,7 @@ export default function Sidebar() {
           </span>
         </div>
         <div className="flex flex-col ml-4">
-          <SidebarButton onClick={() => setShowPopup(true)}>
+          <SidebarButton onClick={() => router.push("/workspace")}>
             Manage members
           </SidebarButton>
           <SidebarButton>My issues</SidebarButton>
@@ -49,7 +56,7 @@ export default function Sidebar() {
         </div>
       </div>
       <div className="flex flex-col ml-4">
-        <SidebarButton>
+        <SidebarButton onClick={() => setShowCreateTeam(true)}>
           <i className="fa-solid fa-plus text-xs mr-2"></i>
           Create Team
         </SidebarButton>
@@ -59,7 +66,7 @@ export default function Sidebar() {
       </div>
       <div className="absolute bottom-0 left-0 w-full p-2 pb-6">
         <hr className="border-gray-500 mt-4 mb-4"></hr>
-        <SidebarButton onClick={() => setShowPopup(true)}>
+        <SidebarButton onClick={() => setShowCreateWorkspace(true)}>
           Create new workspace
         </SidebarButton>
         <SidebarButton>Change workspace</SidebarButton>
