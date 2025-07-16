@@ -14,15 +14,16 @@ import (
 	"github.com/alexedwards/argon2id"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	wsfiber "github.com/gofiber/contrib/websocket"
 	"github.com/nack098/nakumanager/internal/auth"
 	"github.com/nack098/nakumanager/internal/db"
 	models "github.com/nack098/nakumanager/internal/models"
 )
-
 
 type MockUserRepo struct {
 	mock.Mock
@@ -73,15 +74,12 @@ func (m *MockUserRepo) GetUserByEmailWithPassword(ctx context.Context, email str
 	return args.Get(0).(db.GetUserByEmailWithPasswordRow), args.Error(1)
 }
 
-// --- helper function to setup app ---
 func setupApp(handler *auth.AuthHandler) *fiber.App {
 	app := fiber.New()
 	app.Post("/login", handler.Login)
 	app.Post("/register", handler.Register)
 	return app
 }
-
-
 
 func TestRegister_Success(t *testing.T) {
 	mockRepo := new(MockUserRepo)
@@ -253,7 +251,6 @@ func TestLogin_BodyParserError(t *testing.T) {
 	app := setupApp(handler)
 	resetLoginRateLimit()
 
-
 	badJSON := `{"email": "test@example.com", "password": "password123"`
 
 	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(badJSON))
@@ -265,7 +262,6 @@ func TestLogin_BodyParserError(t *testing.T) {
 
 	body, _ := io.ReadAll(resp.Body)
 	assert.Contains(t, string(body), "Invalid request body")
-
 
 	mockRepo.AssertNotCalled(t, "GetUserByEmailWithPassword", mock.Anything, mock.Anything)
 }
@@ -320,7 +316,6 @@ func TestLogin_UserNotFound(t *testing.T) {
 	email := "notfound@example.com"
 	password := "AnyPassword123!"
 
-
 	mockRepo.On("GetUserByEmailWithPassword", mock.Anything, email).
 		Return(db.GetUserByEmailWithPasswordRow{}, errors.New("not found"))
 
@@ -335,7 +330,6 @@ func TestLogin_UserNotFound(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	assert.Contains(t, string(body), "Invalid email or password")
 
-
 	mockRepo.AssertExpectations(t)
 }
 func TestLogin_InvalidPassword(t *testing.T) {
@@ -346,7 +340,6 @@ func TestLogin_InvalidPassword(t *testing.T) {
 	email := "user@example.com"
 	wrongPassword := "wrongpassword"
 	correctPassword := "correctpassword"
-
 
 	hashPass, err := argon2id.CreateHash(correctPassword, argon2id.DefaultParams)
 	require.NoError(t, err)
@@ -374,7 +367,6 @@ func TestLogin_InvalidPassword(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-
 func TestLogin_ValidPassword(t *testing.T) {
 	mockRepo := new(MockUserRepo)
 	handler := auth.NewAuthHandler(mockRepo)
@@ -394,7 +386,6 @@ func TestLogin_ValidPassword(t *testing.T) {
 			PasswordHash: hashPass,
 			Roles:        "user",
 		}, nil)
-
 
 	handler.CreateTokenFunc = func(user models.User) (string, error) {
 		return "valid.jwt.token", nil
@@ -452,7 +443,6 @@ func TestLogin_CreateTokenFail(t *testing.T) {
 	handler := auth.NewAuthHandler(mockRepo)
 	resetLoginRateLimit()
 
-
 	app := setupApp(handler)
 
 	password := "StrongPassword123!"
@@ -460,7 +450,6 @@ func TestLogin_CreateTokenFail(t *testing.T) {
 	assert.NoError(t, err)
 
 	email := "test@example.com"
-
 
 	mockRepo.On("GetUserByEmailWithPassword", mock.Anything, email).
 		Return(db.GetUserByEmailWithPasswordRow{
@@ -470,7 +459,6 @@ func TestLogin_CreateTokenFail(t *testing.T) {
 			PasswordHash: hashPass,
 			Roles:        "user",
 		}, nil)
-
 
 	handler.CreateTokenFunc = func(user models.User) (string, error) {
 		return "", errors.New("token creation failed")
@@ -508,7 +496,6 @@ func TestLogin_InvalidEmailFormat(t *testing.T) {
 
 	body, _ := io.ReadAll(resp.Body)
 	assert.Contains(t, string(body), "Invalid email format")
-
 
 	mockRepo.AssertNotCalled(t, "GetUserByEmailWithPassword", mock.Anything, mock.Anything)
 }
@@ -552,7 +539,6 @@ func TestLogin_Success_UsingRealCompare(t *testing.T) {
 func TestResetLoginAttempts(t *testing.T) {
 	ip := "192.168.0.1"
 
-
 	oldWindow := auth.RateLimitWindow
 	auth.RateLimitWindow = 10 * time.Millisecond
 	defer func() { auth.RateLimitWindow = oldWindow }()
@@ -564,7 +550,7 @@ func TestResetLoginAttempts(t *testing.T) {
 
 	auth.ResetLoginAttempts(ip)
 
-	time.Sleep(auth.RateLimitWindow + 20*time.Millisecond) 
+	time.Sleep(auth.RateLimitWindow + 20*time.Millisecond)
 
 	auth.LoginLock.Lock()
 	defer auth.LoginLock.Unlock()
@@ -689,7 +675,6 @@ func TestVerifyToken_ValidToken(t *testing.T) {
 func TestVerifyToken_InvalidToken(t *testing.T) {
 	handler := &auth.AuthHandler{}
 
-
 	invalidTokenString := "this.is.an.invalid.token"
 
 	parsedToken, err := handler.VerifyToken(invalidTokenString)
@@ -701,10 +686,9 @@ func TestVerifyToken_InvalidToken(t *testing.T) {
 func TestVerifyToken_ExpiredToken(t *testing.T) {
 	handler := &auth.AuthHandler{}
 
-
 	claims := jwt.MapClaims{
 		"user_id": "12345",
-		"exp":     time.Now().Add(-time.Hour).Unix(), 
+		"exp":     time.Now().Add(-time.Hour).Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString(secretKey)
@@ -714,4 +698,132 @@ func TestVerifyToken_ExpiredToken(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, parsedToken)
 	assert.Equal(t, fiber.ErrUnauthorized, err)
+}
+
+func setupWebsocketTestApp(handler *auth.AuthHandler) *fiber.App {
+	app := fiber.New()
+	app.Use(handler.WebSocketAuthRequired())
+
+	app.Get("/ws", wsfiber.New(func(c *wsfiber.Conn) {
+		userID := c.Locals("userID").(string)
+		_ = c.WriteMessage(websocket.TextMessage, []byte("userID:"+userID))
+	}))
+
+	return app
+}
+
+func TestWebSocketAuthRequired_Success(t *testing.T) {
+	app := fiber.New()
+
+	authHandler := &auth.AuthHandler{
+		VerifyTokenFunc: func(tokenStr string) (*jwt.Token, error) {
+			return &jwt.Token{
+				Claims: jwt.MapClaims{
+					"user_id": "12345",
+				},
+				Valid: true,
+			}, nil
+		},
+	}
+
+	app.Use("/ws", authHandler.WebSocketAuthRequired())
+
+	app.Get("/ws", wsfiber.New(func(conn *wsfiber.Conn) {
+		userID := conn.Locals("userID").(string)
+		_ = conn.WriteMessage(websocket.TextMessage, []byte("userID:"+userID))
+	}))
+
+	go func() {
+		_ = app.Listen(":3001")
+	}()
+	defer app.Shutdown()
+
+	time.Sleep(100 * time.Millisecond) 
+
+	dialer := websocket.Dialer{}
+	header := http.Header{}
+	header.Add("Cookie", "token=valid.token")
+
+	wsURL := "ws://localhost:3001/ws"
+	conn, resp, err := dialer.Dial(wsURL, header)
+
+	require.NoError(t, err)
+	require.Equal(t, http.StatusSwitchingProtocols, resp.StatusCode)
+
+	_, msg, err := conn.ReadMessage()
+	require.NoError(t, err)
+	require.Equal(t, "userID:12345", string(msg))
+
+	_ = conn.Close()
+}
+
+func TestWebSocketAuth_MissingToken(t *testing.T) {
+	handler := &auth.AuthHandler{}
+	app := fiber.New()
+
+	app.Use(handler.WebSocketAuthRequired())
+	app.Get("/ws", func(c *fiber.Ctx) error {
+		return c.SendString("Should not reach here")
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/ws", nil)
+	resp, err := app.Test(req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
+
+	body, _ := io.ReadAll(resp.Body)
+	assert.Contains(t, string(body), "Missing token")
+}
+
+func TestWebSocketAuth_InvalidToken(t *testing.T) {
+	handler := &auth.AuthHandler{
+		VerifyTokenFunc: func(tokenStr string) (*jwt.Token, error) {
+			return nil, errors.New("invalid token")
+		},
+	}
+	app := fiber.New()
+
+	app.Use(handler.WebSocketAuthRequired())
+	app.Get("/ws", func(c *fiber.Ctx) error {
+		return c.SendString("Should not reach here")
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/ws", nil)
+	req.AddCookie(&http.Cookie{Name: "token", Value: "invalid.token"})
+	resp, err := app.Test(req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
+
+	body, _ := io.ReadAll(resp.Body)
+	assert.Contains(t, string(body), "Invalid or expired token")
+}
+
+func TestWebSocketAuth_MissingUserID(t *testing.T) {
+	handler := &auth.AuthHandler{
+		VerifyTokenFunc: func(tokenStr string) (*jwt.Token, error) {
+			claims := jwt.MapClaims{} 
+			return &jwt.Token{
+				Claims: claims,
+				Valid:  true,
+			}, nil
+		},
+	}
+	app := fiber.New()
+
+	app.Use(handler.WebSocketAuthRequired())
+	app.Get("/ws", func(c *fiber.Ctx) error {
+		return c.SendString("Should not reach here")
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/ws", nil)
+	req.AddCookie(&http.Cookie{Name: "token", Value: "valid.token"})
+	resp, err := app.Test(req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
+
+	body, _ := io.ReadAll(resp.Body)
+	assert.Contains(t, string(body), "Invalid user ID")
 }
