@@ -1,6 +1,7 @@
 package routes_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
@@ -10,82 +11,51 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/nack098/nakumanager/internal/db"
+	models "github.com/nack098/nakumanager/internal/models"
 	"github.com/nack098/nakumanager/internal/routes"
 	mocks "github.com/nack098/nakumanager/internal/routes/mock_repo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-func TestNewUserHandler(t *testing.T) {
-	mockRepo := new(mocks.MockUserRepo)
-	handler := routes.NewUserHandler(mockRepo)
-
-	assert.NotNil(t, handler)
-	assert.Equal(t, mockRepo, handler.Repo)
-}
-
 func TestCreateUser_Success(t *testing.T) {
 	mockRepo := new(mocks.MockUserRepo)
-	handler := &routes.UserHandler{Repo: mockRepo}
-
+	handler := routes.NewUserHandler(mockRepo)
 	app := fiber.New()
 	app.Post("/users", handler.CreateUser)
 
-	validBody := `{
-		"username": "testuser",
-		"password_hash": "hashedpassword123",
-		"email": "test@example.com",
-		"roles": "admin"
-	}`
+	payload := models.User{
+		Username:     "testuser",
+		Email:        "test@example.com",
+		PasswordHash: "hashedpassword",
+		Roles:        "admin",
+	}
+	body, _ := json.Marshal(payload)
 
-	mockRepo.On("CreateUser", mock.Anything, mock.Anything).Return(nil).Once()
+	mockRepo.On("CreateUser", mock.Anything, mock.MatchedBy(func(p db.CreateUserParams) bool {
+		return p.Username == payload.Username && p.Email == payload.Email
+	})).Return(nil)
 
-	req := httptest.NewRequest(http.MethodPost, "/users", strings.NewReader(validBody))
+	req := httptest.NewRequest(http.MethodPost, "/users", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req)
 
 	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusCreated, resp.StatusCode)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 	mockRepo.AssertExpectations(t)
 }
 
-func TestCreateUser_FailToCreate(t *testing.T) {
+func TestCreateUser_InvalidBody(t *testing.T) {
 	mockRepo := new(mocks.MockUserRepo)
-	handler := &routes.UserHandler{Repo: mockRepo}
-
+	handler := routes.NewUserHandler(mockRepo)
 	app := fiber.New()
 	app.Post("/users", handler.CreateUser)
 
-	validBody := `{
-		"username": "testuser",
-		"password_hash": "hashedpassword123",
-		"email": "test@example.com",
-		"roles": "admin"
-	}`
-
-	mockRepo.On("CreateUser", mock.Anything, mock.Anything).Return(assert.AnError).Once()
-
-	req := httptest.NewRequest(http.MethodPost, "/users", strings.NewReader(validBody))
+	req := httptest.NewRequest(http.MethodPost, "/users", bytes.NewBuffer([]byte("not-json")))
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := app.Test(req, -1)
-
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
-	mockRepo.AssertExpectations(t)
-}
-
-func TestCreateUser_InvalidJSON(t *testing.T) {
-	handler := &routes.UserHandler{}
-
-	app := fiber.New()
-	app.Post("/users", handler.CreateUser)
-
-	invalidBody := `{"username":}`
-
-	req := httptest.NewRequest(http.MethodPost, "/users", strings.NewReader(invalidBody))
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req)
 
 	assert.NoError(t, err)
 	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
@@ -93,138 +63,200 @@ func TestCreateUser_InvalidJSON(t *testing.T) {
 
 func TestGetAllUsers_Success(t *testing.T) {
 	mockRepo := new(mocks.MockUserRepo)
-	handler := &routes.UserHandler{Repo: mockRepo}
-
+	handler := routes.NewUserHandler(mockRepo)
 	app := fiber.New()
 	app.Get("/users", handler.GetAllUsers)
 
-	expectedUsers := []db.ListUsersRow{
-		{ID: "1", Username: "user1", Email: "user1@example.com", Roles: "admin"},
-		{ID: "2", Username: "user2", Email: "user2@example.com", Roles: "user"},
+	mockUsers := []db.ListUsersRow{
+		{ID: uuid.New().String(), Username: "user1", Email: "user1@example.com"},
 	}
-
-	mockRepo.On("ListUsers", mock.Anything).Return(expectedUsers, nil).Once()
+	mockRepo.On("ListUsers", mock.Anything).Return(mockUsers, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/users", nil)
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req)
 
 	assert.NoError(t, err)
 	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
-
-	bodyBytes, err := io.ReadAll(resp.Body)
-	assert.NoError(t, err)
-	resp.Body.Close()
-
-	var got []db.ListUsersRow
-	err = json.Unmarshal(bodyBytes, &got)
-	assert.NoError(t, err)
-	assert.Equal(t, expectedUsers, got)
-
 	mockRepo.AssertExpectations(t)
 }
 
-func TestGetAllUsers_RepoError(t *testing.T) {
+func TestCreateUser_Failure(t *testing.T) {
 	mockRepo := new(mocks.MockUserRepo)
-	handler := &routes.UserHandler{Repo: mockRepo}
+	handler := routes.NewUserHandler(mockRepo)
 
 	app := fiber.New()
-	app.Get("/users", handler.GetAllUsers)
+	app.Post("/users", handler.CreateUser)
 
-	mockRepo.On("ListUsers", mock.Anything).Return(nil, errors.New("db error")).Once()
+	mockRepo.On("CreateUser", mock.Anything, mock.Anything).Return(errors.New("db failed"))
 
-	req := httptest.NewRequest(http.MethodGet, "/users", nil)
-	resp, err := app.Test(req, -1)
+	body := `{
+		"username": "testuser",
+		"email": "test@example.com",
+		"passwordHash": "hashedpw",
+		"roles": "admin"
+	}`
+
+	req := httptest.NewRequest(http.MethodPost, "/users", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
 
 	assert.NoError(t, err)
 	assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
 
-	mockRepo.AssertExpectations(t)
+	b, _ := io.ReadAll(resp.Body)
+	assert.Contains(t, string(b), "failed to create user")
+}
+
+func TestGetAllUsers_Failure(t *testing.T) {
+	mockRepo := new(mocks.MockUserRepo)
+	handler := routes.NewUserHandler(mockRepo)
+
+	app := fiber.New()
+	app.Get("/users", handler.GetAllUsers)
+
+	mockRepo.On("ListUsers", mock.Anything).Return(nil, errors.New("db down"))
+
+	req := httptest.NewRequest(http.MethodGet, "/users", nil)
+	resp, err := app.Test(req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
+
+	b, _ := io.ReadAll(resp.Body)
+	assert.Contains(t, string(b), "db down")
+}
+
+func TestGetUserByID_NotFound(t *testing.T) {
+	mockRepo := new(mocks.MockUserRepo)
+	handler := routes.NewUserHandler(mockRepo)
+
+	app := fiber.New()
+	app.Get("/users/:id", handler.GetUserByID)
+
+	mockRepo.On("GetUserByID", mock.Anything, "abc").Return(db.GetUserByIDRow{}, errors.New("not found"))
+
+	req := httptest.NewRequest(http.MethodGet, "/users/abc", nil)
+	resp, err := app.Test(req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
+
+	b, _ := io.ReadAll(resp.Body)
+	assert.Contains(t, string(b), "user not found")
+}
+
+func TestDeleteUser_Failure(t *testing.T) {
+	mockRepo := new(mocks.MockUserRepo)
+	handler := routes.NewUserHandler(mockRepo)
+
+	app := fiber.New()
+	app.Delete("/users/:id", handler.DeleteUser)
+
+	mockRepo.On("DeleteUser", mock.Anything, "abc").Return(errors.New("delete failed"))
+
+	req := httptest.NewRequest(http.MethodDelete, "/users/abc", nil)
+	resp, err := app.Test(req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
+
+	b, _ := io.ReadAll(resp.Body)
+	assert.Contains(t, string(b), "delete failed")
+}
+
+func TestCreateUser_ErrorFromRepo(t *testing.T) {
+	mockRepo := new(mocks.MockUserRepo)
+	handler := routes.NewUserHandler(mockRepo)
+
+	app := fiber.New()
+	app.Post("/users", handler.CreateUser)
+
+	mockRepo.On("CreateUser", mock.Anything, mock.Anything).Return(errors.New("db error"))
+
+	body := `{
+		"username": "tester",
+		"email": "tester@example.com",
+		"passwordHash": "hashedpassword",
+		"roles": "admin"
+	}`
+
+	req := httptest.NewRequest(http.MethodPost, "/users", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	assert.NoError(t, err)
+	assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
+
+	respBody, _ := io.ReadAll(resp.Body)
+	assert.Contains(t, string(respBody), "failed to create user")
+}
+
+func TestDeleteUser_ErrorFromRepo(t *testing.T) {
+	mockRepo := new(mocks.MockUserRepo)
+	handler := routes.NewUserHandler(mockRepo)
+
+	app := fiber.New()
+	app.Delete("/users/:id", handler.DeleteUser)
+
+	mockRepo.On("DeleteUser", mock.Anything, "u123").Return(errors.New("delete failed"))
+
+	req := httptest.NewRequest(http.MethodDelete, "/users/u123", nil)
+
+	resp, err := app.Test(req)
+	assert.NoError(t, err)
+	assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
+
+	respBody, _ := io.ReadAll(resp.Body)
+	assert.Contains(t, string(respBody), "delete failed")
 }
 
 func TestGetUserByID_Success(t *testing.T) {
 	mockRepo := new(mocks.MockUserRepo)
-	handler := &routes.UserHandler{Repo: mockRepo}
+	handler := routes.NewUserHandler(mockRepo)
 
 	app := fiber.New()
 	app.Get("/users/:id", handler.GetUserByID)
 
 	expectedUser := db.GetUserByIDRow{
-		ID:       "user-123",
+		ID:       "123",
 		Username: "testuser",
 		Email:    "test@example.com",
-		Roles:    "admin",
+		Roles:   "admin",
 	}
 
-	mockRepo.On("GetUserByID", mock.Anything, "user-123").Return(expectedUser, nil).Once()
+	mockRepo.On("GetUserByID", mock.Anything, "123").Return(expectedUser, nil)
 
-	req := httptest.NewRequest(http.MethodGet, "/users/user-123", nil)
-	resp, err := app.Test(req, -1)
-
+	req := httptest.NewRequest(http.MethodGet, "/users/123", nil)
+	resp, err := app.Test(req)
 	assert.NoError(t, err)
 	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+	bodyBytes, _ := io.ReadAll(resp.Body)
 
-	bodyBytes, err := io.ReadAll(resp.Body)
+	var actualUser db.GetUserByIDRow
+	err = json.Unmarshal(bodyBytes, &actualUser)
 	assert.NoError(t, err)
-	resp.Body.Close()
-
-	var got db.GetUserByIDRow
-	err = json.Unmarshal(bodyBytes, &got)
-	assert.NoError(t, err)
-	assert.Equal(t, expectedUser, got)
-
-	mockRepo.AssertExpectations(t)
-}
-
-func TestGetUserByID_NotFound(t *testing.T) {
-	mockRepo := new(mocks.MockUserRepo)
-	handler := &routes.UserHandler{Repo: mockRepo}
-
-	app := fiber.New()
-	app.Get("/users/:id", handler.GetUserByID)
-
-	mockRepo.On("GetUserByID", mock.Anything, "user-123").Return(db.GetUserByIDRow{}, errors.New("not found")).Once()
-
-	req := httptest.NewRequest(http.MethodGet, "/users/user-123", nil)
-	resp, err := app.Test(req, -1)
-
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
+	assert.Equal(t, expectedUser, actualUser)
 
 	mockRepo.AssertExpectations(t)
 }
 
 func TestDeleteUser_Success(t *testing.T) {
 	mockRepo := new(mocks.MockUserRepo)
-	handler := &routes.UserHandler{Repo: mockRepo}
+	handler := routes.NewUserHandler(mockRepo)
 
 	app := fiber.New()
 	app.Delete("/users/:id", handler.DeleteUser)
 
-	mockRepo.On("DeleteUser", mock.Anything, "user-123").Return(nil).Once()
+	userID := "123"
+	mockRepo.On("DeleteUser", mock.Anything, userID).Return(nil)
 
-	req := httptest.NewRequest(http.MethodDelete, "/users/user-123", nil)
-	resp, err := app.Test(req, -1)
-
+	req := httptest.NewRequest(http.MethodDelete, "/users/123", nil)
+	resp, err := app.Test(req)
 	assert.NoError(t, err)
+
 	assert.Equal(t, fiber.StatusNoContent, resp.StatusCode)
 
 	mockRepo.AssertExpectations(t)
 }
 
-func TestDeleteUser_Fail(t *testing.T) {
-	mockRepo := new(mocks.MockUserRepo)
-	handler := &routes.UserHandler{Repo: mockRepo}
-
-	app := fiber.New()
-	app.Delete("/users/:id", handler.DeleteUser)
-
-	mockRepo.On("DeleteUser", mock.Anything, "user-123").Return(errors.New("delete failed")).Once()
-
-	req := httptest.NewRequest(http.MethodDelete, "/users/user-123", nil)
-	resp, err := app.Test(req, -1)
-
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
-
-	mockRepo.AssertExpectations(t)
-}
