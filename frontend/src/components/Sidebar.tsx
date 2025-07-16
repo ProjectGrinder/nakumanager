@@ -7,12 +7,17 @@ import CreateWorkspacePopup from "./popup/CreateWorkspacePopup";
 import CreateTeamPopup from "./popup/CreateTeamPopup";
 import ChangeWorkspacePopup from "./popup/ChangeWorkspacePopup";
 
-export default function Sidebar() {
+export default function Sidebar(team: string) {
   const currentWorkspace = "Workspace 1";
   const teams = ["Team 1", "Team 2", "Team 3"];
+  const [selectedTeam, setSelectedTeam] = useState(team);
   const router = useRouter();
   const handleLogout = () => {
     router.push("/login");
+  };
+  const selectTeam = (currentTeam: string) => {
+    setSelectedTeam(currentTeam);
+    router.push("/team");
   };
   const [popupNumber, setPopupNumber] = useState(0);
   const handlePopupSubmit = (value: string) => {
@@ -69,7 +74,34 @@ export default function Sidebar() {
           Create Team
         </SidebarButton>
         {teams.map((team, index) => (
-          <SidebarButton key={index}>{team}</SidebarButton>
+          <div key={index}>
+            <SidebarButton
+              onClick={() => selectTeam(team)}
+              className={
+                selectedTeam === team
+                  ? "bg-gray-700 text-white font-semibold"
+                  : ""
+              }
+            >
+              {team}
+            </SidebarButton>
+            {selectedTeam === team && (
+              <div className="flex flex-col ml-4">
+                <SidebarButton onClick={() => router.push("/project-list")}>
+                  <i className="fa-solid fa-cube text-xs mr-4 w-2"></i>
+                  Projects
+                </SidebarButton>
+                <SidebarButton onClick={() => router.push("issue-list")}>
+                  <i className="fa-solid fa-bookmark text-xs mr-4 w-2"></i>
+                  Issues
+                </SidebarButton>
+                <SidebarButton onClick={() => router.push("issue-list")}>
+                  <i className="fa-solid fa-layer-group text-xs mr-4 w-2"></i>
+                  Views
+                </SidebarButton>
+              </div>
+            )}
+          </div>
         ))}
       </div>
       <div className="absolute bottom-0 left-0 w-full p-2 pb-6">
