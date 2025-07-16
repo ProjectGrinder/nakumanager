@@ -6,6 +6,7 @@ import (
 	"log"
 
 	models "github.com/nack098/nakumanager/internal/models"
+	"github.com/nack098/nakumanager/internal/ws"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -320,6 +321,8 @@ func (h *ViewHandler) UpdateView(c *fiber.Ctx) error {
 			}
 		}
 	}
+
+	ws.BroadcastToRoom("view", viewID, "view_updated", req)
 
 	log.Println("View updated successfully")
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "View updated successfully"})

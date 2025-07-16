@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	models "github.com/nack098/nakumanager/internal/models"
 	"github.com/nack098/nakumanager/internal/repositories"
+	"github.com/nack098/nakumanager/internal/ws"
 )
 
 // Interface WorkspaceHandler
@@ -157,6 +158,9 @@ func (h *WorkspaceHandler) UpdateWorkspace(c *fiber.Ctx) error {
 			}
 		}
 	}
+	
+
+	ws.BroadcastToRoom("workspace", workspaceID, "workspace_updated", req)
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "workspace updated successfully"})
 }

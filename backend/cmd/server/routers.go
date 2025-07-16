@@ -11,6 +11,7 @@ import (
 	"github.com/nack098/nakumanager/internal/gateway"
 	"github.com/nack098/nakumanager/internal/repositories"
 	"github.com/nack098/nakumanager/internal/routes"
+	"github.com/nack098/nakumanager/internal/ws"
 )
 
 func LoggerMiddleware(c *fiber.Ctx) error {
@@ -61,7 +62,8 @@ func SetUpRouters(app *fiber.App, conn *sql.DB) {
 	gateway.SetUpIssueRoutes(private, issueHandler)
 	gateway.SetUpViewRoutes(private, viewHandler)
 
-	// wsGroup := app.Group("/ws", ws.WebSocketMiddleware(authHandler))
-	// wsGroup.Get("/", websocket.New(wsHandler.CentralWebSocketHandler))
+	wsHandler := &ws.WebSocketHandler{}
+	app.Use("/ws", authHandler.WebSocketAuthRequired())
+	app.Get("/ws", wsHandler.Handle)
 
 }

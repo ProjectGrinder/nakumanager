@@ -26,7 +26,7 @@ func NewAuthHandler(userRepo repositories.UserRepository) *AuthHandler {
 		UserRepo: userRepo,
 	}
 	h.CreateTokenFunc = h.CreateToken
-	h.VerifyTokenFunc = h.verifyTokenInternal  
+	h.VerifyTokenFunc = h.verifyTokenInternal
 	return h
 }
 
@@ -58,7 +58,7 @@ var (
 	RateLimitWindow = time.Minute * 5
 	LastAttempt     = make(map[string]time.Time)
 	secretKey       = []byte("secret-key")
-	ResetDelay = time.Minute
+	ResetDelay      = time.Minute
 )
 
 func (h *AuthHandler) CreateToken(user models.User) (string, error) {
@@ -92,6 +92,35 @@ func (h *AuthHandler) AuthRequired(c *fiber.Ctx) error {
 
 	c.Locals("userID", userID)
 	return c.Next()
+}
+
+func (h *AuthHandler) WebSocketAuthRequired() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// ✅ ดึง token จาก query
+		tokenStr := string(c.Request().Header.Cookie("token"))
+		if tokenStr == "" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Missing token in query"})
+		}
+
+		token, err := h.VerifyToken(tokenStr)
+		if err != nil || !token.Valid {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid or expired token"})
+		}
+
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid token claims"})
+		}
+
+		userID, ok := claims["user_id"].(string)
+		if !ok || userID == "" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid user ID in token"})
+		}
+
+		// ✅ บันทึก userID ไว้ใน context
+		c.Locals("userID", userID)
+		return c.Next()
+	}
 }
 
 func ResetLoginAttempts(ip string) {

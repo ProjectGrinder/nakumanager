@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	models "github.com/nack098/nakumanager/internal/models"
 	"github.com/nack098/nakumanager/internal/repositories"
+	"github.com/nack098/nakumanager/internal/ws"
 )
 
 type ProjectHandler struct {
@@ -120,6 +121,8 @@ func (h *ProjectHandler) UpdateProject(c *fiber.Ctx) error {
 	if _, err := h.DB.ExecContext(c.Context(), query, args...); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update project"})
 	}
+
+	ws.BroadcastToRoom("project", projectID, "project_updated", body)
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Project updated successfully"})
 }

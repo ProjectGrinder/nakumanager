@@ -9,6 +9,7 @@ import (
 	"github.com/nack098/nakumanager/internal/db"
 	models "github.com/nack098/nakumanager/internal/models"
 	"github.com/nack098/nakumanager/internal/repositories"
+	"github.com/nack098/nakumanager/internal/ws"
 )
 
 type TeamHandler struct {
@@ -215,6 +216,8 @@ func (h *TeamHandler) UpdateTeam(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to set team leader"})
 		}
 	}
+
+	ws.BroadcastToRoom("team", teamID, "team_updated", req)
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "team updated successfully"})
 }

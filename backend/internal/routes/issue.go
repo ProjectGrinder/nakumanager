@@ -12,6 +12,7 @@ import (
 	"github.com/nack098/nakumanager/internal/db"
 	models "github.com/nack098/nakumanager/internal/models"
 	"github.com/nack098/nakumanager/internal/repositories"
+	"github.com/nack098/nakumanager/internal/ws"
 )
 
 type IssueHandler struct {
@@ -230,6 +231,8 @@ func (h *IssueHandler) UpdateIssue(c *fiber.Ctx) error {
 			})
 		}
 	}
+
+	ws.BroadcastToRoom("issue", req.ID, "issue_updated", req)
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "issue updated successfully",
