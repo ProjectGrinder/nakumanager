@@ -96,7 +96,6 @@ func (h *AuthHandler) AuthRequired(c *fiber.Ctx) error {
 
 func (h *AuthHandler) WebSocketAuthRequired() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// ✅ ดึง token จาก query
 		tokenStr := string(c.Request().Header.Cookie("token"))
 		if tokenStr == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Missing token in query"})
@@ -117,7 +116,6 @@ func (h *AuthHandler) WebSocketAuthRequired() fiber.Handler {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid user ID in token"})
 		}
 
-		// ✅ บันทึก userID ไว้ใน context
 		c.Locals("userID", userID)
 		return c.Next()
 	}
