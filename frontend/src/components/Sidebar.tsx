@@ -11,7 +11,18 @@ import DeleteWorkspacePopup from "./popup/DeleteWorkspacePopup";
 
 export default function Sidebar(team: string) {
   const currentWorkspace = "Workspace 1";
-  const teams = ["Team 1", "Team 2", "Team 3"];
+  const teams = [
+    "Team 1",
+    "Team 2",
+    "Team 3",
+    "Team 4",
+    "Team 5",
+    "Team 6",
+    "Team 7",
+    "Team 8",
+    "Team 9",
+    "Team 10",
+  ];
   const [selectedTeam, setSelectedTeam] = useState(team);
   const [popupNumber, setPopupNumber] = useState(0);
   const router = useRouter();
@@ -130,7 +141,7 @@ export default function Sidebar(team: string) {
           <hr className="border-gray-500 mt-4 mb-4"></hr>
         </div>
       </div>
-      <div className="flex flex-col ml-4">
+      <div className="flex flex-col ml-4 overflow-y-auto max-h-115">
         <SidebarButton onClick={() => setPopupNumber(3)}>
           <i className="fa-solid fa-plus text-xs mr-2"></i>
           Create Team
@@ -153,11 +164,11 @@ export default function Sidebar(team: string) {
                   <i className="fa-solid fa-cube text-xs mr-4 w-2"></i>
                   Projects
                 </SidebarButton>
-                <SidebarButton onClick={() => router.push("issue-list")}>
+                <SidebarButton onClick={() => router.push("/issue-list")}>
                   <i className="fa-solid fa-bookmark text-xs mr-4 w-2"></i>
                   Issues
                 </SidebarButton>
-                <SidebarButton onClick={() => router.push("view-list")}>
+                <SidebarButton onClick={() => router.push("/view-list")}>
                   <i className="fa-solid fa-layer-group text-xs mr-4 w-2"></i>
                   Views
                 </SidebarButton>
