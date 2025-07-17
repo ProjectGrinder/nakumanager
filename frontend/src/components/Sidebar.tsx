@@ -7,6 +7,7 @@ import CreateWorkspacePopup from "./popup/CreateWorkspacePopup";
 import CreateTeamPopup from "./popup/CreateTeamPopup";
 import ChangeWorkspacePopup from "./popup/ChangeWorkspacePopup";
 import RenameWorkspacePopup from "./popup/RenameWorkspacePopup";
+import DeleteWorkspacePopup from "./popup/DeleteWorkspacePopup";
 
 export default function Sidebar(team: string) {
   const currentWorkspace = "Workspace 1";
@@ -74,6 +75,12 @@ export default function Sidebar(team: string) {
       <RenameWorkspacePopup
         open={popupNumber === 4}
         oldName={currentWorkspace}
+        onClose={() => setPopupNumber(0)}
+        onSubmit={handlePopupSubmit}
+      />
+      <DeleteWorkspacePopup
+        open={popupNumber === 5}
+        name={currentWorkspace}
         onClose={() => setPopupNumber(0)}
         onSubmit={handlePopupSubmit}
       />
