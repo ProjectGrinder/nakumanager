@@ -56,6 +56,7 @@ FROM teams
 WHERE id = ?
 `
 
+
 func (q *Queries) GetLeaderByTeamID(ctx context.Context, id string) (interface{}, error) {
 	row := q.db.QueryRowContext(ctx, getLeaderByTeamID, id)
 	var leader_id interface{}

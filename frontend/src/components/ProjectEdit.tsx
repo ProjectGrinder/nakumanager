@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  SelectChangeEvent,
-} from "@mui/material";
-import PriorityIcon from "./PriorityIcon";
-import StatusIcon from "./StatusIcon";
+import { FormControl, InputLabel, Select, MenuItem } from "@mui/material";
 import { useState } from "react";
 
 export default function ProjectEdit() {
@@ -16,7 +8,7 @@ export default function ProjectEdit() {
     name: "AI Voicebot",
     status: "In Progress",
     priority: "High Priority",
-    leader: "Alice",
+    leader: "Member 1",
     startDate: "2024-01-01",
     endDate: "2024-06-01",
     label: "AI",
@@ -26,9 +18,33 @@ export default function ProjectEdit() {
       ["Member 3", "Backend"],
     ],
   };
-  const [newLeader, setNewLeader] = useState("");
-  const [newStatus, setNewStatus] = useState("");
-  const [newPriority, setNewPriority] = useState("");
+  const [name, setName] = useState(project.name);
+  const [leader, setLeader] = useState(project.leader);
+  const [status, setStatus] = useState(project.status);
+  const [priority, setPriority] = useState(project.priority);
+  const [startDate, setStartDate] = useState(project.startDate);
+  const [endDate, setEndDate] = useState(project.endDate);
+  const [label, setLabel] = useState(project.label);
+  const style = {
+    "& .MuiInputLabel-root": { color: "white" },
+    "& .MuiOutlinedInput-root": {
+      color: "white",
+      backgroundColor: "#374151",
+      borderRadius: "0.5rem",
+      "& fieldset": {
+        borderColor: "#d1d5db",
+      },
+      "&:hover fieldset": {
+        borderColor: "#60a5fa",
+      },
+      "&.Mui-focused fieldset": {
+        borderColor: "#2563eb",
+      },
+    },
+    "& .MuiSvgIcon-root": {
+      color: "white",
+    },
+  };
   const addMember = () => {
     console.log("Add new member");
   };
@@ -38,18 +54,6 @@ export default function ProjectEdit() {
   const handleSave = () => {
     console.log("Save clicked");
   };
-  const handleLeader = (event: SelectChangeEvent) => {
-    setNewLeader(event.target.value as string);
-    project.leader = newLeader;
-  };
-  const handleStatus = (event: SelectChangeEvent) => {
-    setNewStatus(event.target.value as string);
-    project.status = newStatus;
-  };
-  const handlePriority = (event: SelectChangeEvent) => {
-    setNewPriority(event.target.value as string);
-    project.priority = newPriority;
-  };
   return (
     <div className="flex flex-col p-10 text-white w-2/5">
       <div className="flex flex-col w-1/2 mb-8">
@@ -57,19 +61,22 @@ export default function ProjectEdit() {
         <input
           className="bg-gray-100 text-gray-700 p-4 text-base rounded outline-none"
           type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
           placeholder="Enter project name"
         />
       </div>
-      <div className="flex flex-col text-lg font-normal">
-        <div>
+      <div className="flex flex-col gap-2 text-lg font-normal">
+        <div className="flex flew-row w-100 gap-2">
           <span>Project Leader:</span>
-          <FormControl variant="standard">
+          <FormControl fullWidth sx={style}>
+            <InputLabel id="demo-simple-select-label">Leader</InputLabel>
             <Select
               labelId="demo-simple-select-label"
               id="demo-simple-select"
-              value={newLeader}
+              value={leader}
               label="Leader"
-              onChange={handleLeader}
+              onChange={(e) => setLeader(e.target.value)}
             >
               <MenuItem value={"Member 1"}>Member 1</MenuItem>
               <MenuItem value={"Member 2"}>Member 2</MenuItem>
@@ -77,40 +84,42 @@ export default function ProjectEdit() {
             </Select>
           </FormControl>
         </div>
-        <div className="flex flex-row justify-between mb-6">
-          <div>
+        <div className="flex flex-row justify-between">
+          <div className="flex flew-row gap-2">
             <span>Status:</span>
-            <FormControl variant="standard">
+            <FormControl fullWidth sx={style}>
+              <InputLabel id="demo-simple-select-label">Status</InputLabel>
               <Select
                 labelId="demo-simple-select-label"
                 id="demo-simple-select"
-                value={newStatus}
+                value={status}
                 label="Status"
-                onChange={handleStatus}
+                onChange={(e) => setStatus(e.target.value)}
               >
                 <MenuItem value={"Backlog"}>Backlog</MenuItem>
                 <MenuItem value={"Planned"}>Planned</MenuItem>
                 <MenuItem value={"In Progress"}>In Progress</MenuItem>
-                <MenuItem value={"Planned"}>Completed</MenuItem>
-                <MenuItem value={"In Progress"}>Cancelled</MenuItem>
+                <MenuItem value={"Completed"}>Completed</MenuItem>
+                <MenuItem value={"Cancelled"}>Cancelled</MenuItem>
               </Select>
             </FormControl>
           </div>
-          <div>
+          <div className="flex flew-row gap-2">
             <span>Priority:</span>
-            <FormControl variant="standard">
+            <FormControl fullWidth sx={style}>
+              <InputLabel id="demo-simple-select-label">Priority</InputLabel>
               <Select
                 labelId="demo-simple-select-label"
                 id="demo-simple-select"
-                value={newPriority}
+                value={priority}
                 label="Priority"
-                onChange={handlePriority}
+                onChange={(e) => setPriority(e.target.value)}
               >
-                <MenuItem value={"Backlog"}>Backlog</MenuItem>
-                <MenuItem value={"Planned"}>Planned</MenuItem>
-                <MenuItem value={"In Progress"}>In Progress</MenuItem>
-                <MenuItem value={"Planned"}>Completed</MenuItem>
-                <MenuItem value={"In Progress"}>Cancelled</MenuItem>
+                <MenuItem value={"No Priority"}>No Priority</MenuItem>
+                <MenuItem value={"Low Priority"}>Low Priority</MenuItem>
+                <MenuItem value={"Medium Priority"}>Medium Priority</MenuItem>
+                <MenuItem value={"High Priority"}>High Priority</MenuItem>
+                <MenuItem value={"Urgent"}>Urgent</MenuItem>
               </Select>
             </FormControl>
           </div>
@@ -118,11 +127,21 @@ export default function ProjectEdit() {
         <div className="flex flex-row justify-between mb-6">
           <div>
             <span>Start Date:</span>
-            <input type="date" className="ml-4 color-white" />
+            <input
+              className="bg-gray-100 text-gray-700 p-2 ml-4 rounded outline-none"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
           </div>
           <div>
             <span>End Date:</span>
-            <input type="date" className="ml-4 color-white" />
+            <input
+              className="bg-gray-100 text-gray-700 p-2 ml-4 rounded outline-none"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
           </div>
         </div>
         <div>
@@ -130,6 +149,8 @@ export default function ProjectEdit() {
           <input
             className="bg-gray-100 text-gray-700 p-2 ml-4 text-base rounded outline-none"
             type="text"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
             placeholder="Enter label"
           />
         </div>
@@ -141,7 +162,7 @@ export default function ProjectEdit() {
           onClick={addMember}
         ></i>
       </div>
-      <table className="table-auto text-lg w-full text-left text-white mt-6 h-80 max-h-80 overflow-y-auto">
+      <table className="table-auto text-lg w-full text-left text-white mt-6 h-50 max-h-50 overflow-y-auto">
         <tbody>
           {project.members.map((member, index) => (
             <tr key={index}>

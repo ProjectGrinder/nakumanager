@@ -70,6 +70,7 @@ func (q *Queries) DeleteProject(ctx context.Context, id string) error {
 	return err
 }
 
+
 const getLeaderByProjectID = `-- name: GetLeaderByProjectID :one
 SELECT leader_id
 FROM projects

@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
-import Select, { SelectChangeEvent } from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
+import { SelectChangeEvent } from "@mui/material/Select";
+import { FormControlLabel, FormGroup, Switch } from "@mui/material";
 
 export default function WorkspaceEdit() {
+  const workspaceName = "Workspace 1";
   const member_info = [
     ["Admin 1", "Admin"],
     ["Admin 2", "Admin"],
@@ -15,8 +14,9 @@ export default function WorkspaceEdit() {
     ["Member 2", "Member"],
     ["Member 3", "Member"],
   ];
+  const [info, setInfo] = useState(member_info);
+  const [name, setName] = useState(workspaceName);
   const [copied, setCopied] = useState(false);
-  const [role, setRole] = useState("");
   const sendInvite = async () => {
     try {
       await navigator.clipboard.writeText("Copy successful!");
@@ -32,11 +32,6 @@ export default function WorkspaceEdit() {
   const handleSave = () => {
     console.log("Save clicked");
   };
-  const handleChange = (event: SelectChangeEvent, index: number) => {
-    setRole(event.target.value as string);
-    member_info[index][1] = role;
-    console.log(role, member_info[index][1]); //label doesn't change
-  };
   const removeMember = (index: number) => {
     member_info.splice(index, 1);
     console.log(`Member at index ${index} removed`);
@@ -48,6 +43,8 @@ export default function WorkspaceEdit() {
         <input
           className="bg-gray-100 text-gray-700 p-4 text-base rounded outline-none"
           type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
           placeholder="Enter workspace name"
         />
       </div>
@@ -63,24 +60,24 @@ export default function WorkspaceEdit() {
         </div>
         <table className="table-auto text-lg w-full text-left text-white mt-6 h-80 overflow-y-auto">
           <tbody>
-            {member_info.map((member, index) => (
-              <tr>
-                <td className="w-[60%] p-4" key={index}>
-                  {member[0]}
-                </td>
-                <td className="w-[30%] p-4" key={index}>
-                  <FormControl fullWidth className="bg-gray-100 text-gray-700">
-                    <Select
-                      labelId="demo-simple-select-label"
-                      id="demo-simple-select"
-                      value={member_info[index][1]}
-                      label="Role"
-                      onChange={(event) => handleChange(event, index)}
-                    >
-                      <MenuItem value={"Admin"}>Admin</MenuItem>
-                      <MenuItem value={"Member"}>Member</MenuItem>
-                    </Select>
-                  </FormControl>
+            {info.map((member, index) => (
+              <tr key={index}>
+                <td className="w-[60%] p-3">{member[0]}</td>
+                <td className="w-[30%] p-3">
+                  <FormGroup>
+                    <FormControlLabel
+                      control={<Switch checked={member[1] === "Admin"} />}
+                      onChange={() => {
+                        const updated = info.map((m, i) =>
+                          i === index
+                            ? [m[0], m[1] === "Admin" ? "Member" : "Admin"]
+                            : m
+                        );
+                        setInfo(updated);
+                      }}
+                      label="Admin"
+                    />
+                  </FormGroup>
                 </td>
                 <td>
                   <i

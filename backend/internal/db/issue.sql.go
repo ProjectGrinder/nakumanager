@@ -27,6 +27,7 @@ func (q *Queries) AddAssigneeToIssue(ctx context.Context, arg AddAssigneeToIssue
 
 const createIssue = `-- name: CreateIssue :exec
 INSERT INTO issues (
+
     id, title, content, priority, status, project_id, team_id,
     start_date, end_date, label, owner_id
 )
@@ -74,6 +75,7 @@ func (q *Queries) DeleteIssue(ctx context.Context, id string) error {
 }
 
 const getIssueByID = `-- name: GetIssueByID :one
+
 SELECT id, title, content, priority, status, project_id, team_id, start_date, end_date, label, owner_id
 FROM issues
 WHERE id = ?
@@ -99,6 +101,7 @@ func (q *Queries) GetIssueByID(ctx context.Context, id string) (Issue, error) {
 }
 
 const getIssueByUserID = `-- name: GetIssueByUserID :many
+
 SELECT DISTINCT i.id, i.title, i.content, i.priority, i.status, i.project_id, i.team_id, i.start_date, i.end_date, i.label, i.owner_id
 FROM issues i
 LEFT JOIN issue_assignees ia ON i.id = ia.issue_id
@@ -224,6 +227,7 @@ func (q *Queries) ListIssuesByProjectID(ctx context.Context, projectID sql.NullS
 }
 
 const listIssuesByTeamID = `-- name: ListIssuesByTeamID :many
+
 SELECT id, title, content, priority, status, project_id, team_id, start_date, end_date, label, owner_id
 FROM issues
 WHERE team_id = ?
