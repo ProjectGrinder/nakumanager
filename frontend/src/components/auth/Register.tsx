@@ -2,13 +2,17 @@
 
 import Link from "next/link";
 import { users } from "../../Database";
-import { useState } from "react";
+import { FormEvent, useState } from "react";
 export default function Register() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
 
-  const handleRegister = () => {
+  const [message, setMessage] = useState("");
+
+  const handleRegister = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
     if (username == "" || password == "" || email == "") {
       alert("Please fill in every field");
       return;
@@ -34,8 +38,26 @@ export default function Register() {
       alert("Password must be at least 8 characters");
       return;
     }
+    try {
+      const res = await fetch("http://localhost:8080/api/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, email, password }),
+      });
 
-    // users.push([username, email, password]);
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`API error: ${res.status} - ${errorText}`);
+      }
+
+      const data = await res.json();
+      setMessage(data.message);
+    } catch (err) {
+      console.error(err);
+      setMessage("Registration failed");
+    }
     console.log("Registration complete!");
   };
 
@@ -85,7 +107,7 @@ export default function Register() {
 
           <button
             id="btn-check"
-            onClick={handleRegister}
+            onClick={(e) => handleRegister}
             className="mt-6 border-box px-10 py-4 bg-blue-500 text-lg text-white rounded-xl hover:bg-blue-700"
           >
             Confirm
