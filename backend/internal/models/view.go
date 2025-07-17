@@ -1,10 +1,19 @@
 package model
 
-type View struct {
-	ID       uint     `json:"id"`
-	Name     string   `json:"name"`
-	UserID   uint     `json:"user_id"`
-	TeamID   uint     `json:"team_id"`
+type CreateView struct {
+	ID        string   `json:"id"`
+	Name      string   `json:"name"`
+	TeamID    string   `json:"team_id"`
+	Assignnee string   `json:"assignee"`
+	GroupBys  []string `json:"group_bys"`
+}
+
+type ViewGroupBy struct {
 	GroupBys []string `json:"group_bys"`
-	// Issues   []Issue  `json:"issues"`
+}
+
+type UpdateViewRequest struct {
+	TeamID   string   `json:"team_id"`
+	Name     string   `json:"name"`
+	GroupBys []string `json:"group_bys"`
 }

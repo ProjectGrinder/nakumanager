@@ -27,10 +27,11 @@ func (q *Queries) AddAssigneeToIssue(ctx context.Context, arg AddAssigneeToIssue
 
 const createIssue = `-- name: CreateIssue :exec
 INSERT INTO issues (
-    id, title, content, priority, status, project_id, team_id, assignee,
+
+    id, title, content, priority, status, project_id, team_id,
     start_date, end_date, label, owner_id
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type CreateIssueParams struct {
@@ -41,7 +42,6 @@ type CreateIssueParams struct {
 	Status    string         `json:"status"`
 	ProjectID sql.NullString `json:"project_id"`
 	TeamID    string         `json:"team_id"`
-	Assignee  sql.NullString `json:"assignee"`
 	StartDate sql.NullTime   `json:"start_date"`
 	EndDate   sql.NullTime   `json:"end_date"`
 	Label     sql.NullString `json:"label"`
@@ -57,7 +57,6 @@ func (q *Queries) CreateIssue(ctx context.Context, arg CreateIssueParams) error 
 		arg.Status,
 		arg.ProjectID,
 		arg.TeamID,
-		arg.Assignee,
 		arg.StartDate,
 		arg.EndDate,
 		arg.Label,
@@ -76,7 +75,8 @@ func (q *Queries) DeleteIssue(ctx context.Context, id string) error {
 }
 
 const getIssueByID = `-- name: GetIssueByID :one
-SELECT id, title, content, priority, status, assignee, project_id, team_id, start_date, end_date, label, owner_id
+
+SELECT id, title, content, priority, status, project_id, team_id, start_date, end_date, label, owner_id
 FROM issues
 WHERE id = ?
 `
@@ -90,7 +90,6 @@ func (q *Queries) GetIssueByID(ctx context.Context, id string) (Issue, error) {
 		&i.Content,
 		&i.Priority,
 		&i.Status,
-		&i.Assignee,
 		&i.ProjectID,
 		&i.TeamID,
 		&i.StartDate,
@@ -102,14 +101,20 @@ func (q *Queries) GetIssueByID(ctx context.Context, id string) (Issue, error) {
 }
 
 const getIssueByUserID = `-- name: GetIssueByUserID :many
-SELECT i.id, i.title, i.content, i.priority, i.status, i.assignee, i.project_id, i.team_id, i.start_date, i.end_date, i.label, i.owner_id
+
+SELECT DISTINCT i.id, i.title, i.content, i.priority, i.status, i.project_id, i.team_id, i.start_date, i.end_date, i.label, i.owner_id
 FROM issues i
-JOIN issue_assignees ia ON i.id = ia.issue_id
-WHERE ia.user_id = ?
+LEFT JOIN issue_assignees ia ON i.id = ia.issue_id
+WHERE i.owner_id = ? OR ia.user_id = ?
 `
 
-func (q *Queries) GetIssueByUserID(ctx context.Context, userID string) ([]Issue, error) {
-	rows, err := q.db.QueryContext(ctx, getIssueByUserID, userID)
+type GetIssueByUserIDParams struct {
+	OwnerID string `json:"owner_id"`
+	UserID  string `json:"user_id"`
+}
+
+func (q *Queries) GetIssueByUserID(ctx context.Context, arg GetIssueByUserIDParams) ([]Issue, error) {
+	rows, err := q.db.QueryContext(ctx, getIssueByUserID, arg.OwnerID, arg.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +128,6 @@ func (q *Queries) GetIssueByUserID(ctx context.Context, userID string) ([]Issue,
 			&i.Content,
 			&i.Priority,
 			&i.Status,
-			&i.Assignee,
 			&i.ProjectID,
 			&i.TeamID,
 			&i.StartDate,
@@ -181,7 +185,7 @@ func (q *Queries) ListAssigneesByIssueID(ctx context.Context, issueID string) ([
 }
 
 const listIssuesByProjectID = `-- name: ListIssuesByProjectID :many
-SELECT id, title, content, priority, status, assignee, project_id, team_id, start_date, end_date, label, owner_id
+SELECT id, title, content, priority, status, project_id, team_id, start_date, end_date, label, owner_id
 FROM issues
 WHERE project_id = ?
 ORDER BY start_date DESC
@@ -202,7 +206,6 @@ func (q *Queries) ListIssuesByProjectID(ctx context.Context, projectID sql.NullS
 			&i.Content,
 			&i.Priority,
 			&i.Status,
-			&i.Assignee,
 			&i.ProjectID,
 			&i.TeamID,
 			&i.StartDate,
@@ -224,7 +227,8 @@ func (q *Queries) ListIssuesByProjectID(ctx context.Context, projectID sql.NullS
 }
 
 const listIssuesByTeamID = `-- name: ListIssuesByTeamID :many
-SELECT id, title, content, priority, status, assignee, project_id, team_id, start_date, end_date, label, owner_id
+
+SELECT id, title, content, priority, status, project_id, team_id, start_date, end_date, label, owner_id
 FROM issues
 WHERE team_id = ?
 ORDER BY start_date DESC
@@ -245,7 +249,6 @@ func (q *Queries) ListIssuesByTeamID(ctx context.Context, teamID string) ([]Issu
 			&i.Content,
 			&i.Priority,
 			&i.Status,
-			&i.Assignee,
 			&i.ProjectID,
 			&i.TeamID,
 			&i.StartDate,

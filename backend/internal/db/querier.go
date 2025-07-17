@@ -25,29 +25,38 @@ type Querier interface {
 	DeleteIssue(ctx context.Context, id string) error
 	DeleteProject(ctx context.Context, id string) error
 	DeleteTeam(ctx context.Context, id string) error
-	DeleteTeamFromTeamMembers(ctx context.Context, teamID string) error
 	DeleteUser(ctx context.Context, id string) error
 	DeleteView(ctx context.Context, id string) error
 	DeleteWorkspace(ctx context.Context, id string) error
 	GetIssueByID(ctx context.Context, id string) (Issue, error)
-	GetIssueByUserID(ctx context.Context, userID string) ([]Issue, error)
-	GetLeaderByTeamID(ctx context.Context, id string) (sql.NullString, error)
+	GetIssueByUserID(ctx context.Context, arg GetIssueByUserIDParams) ([]Issue, error)
+	GetIssuesByAssignee(ctx context.Context, arg GetIssuesByAssigneeParams) ([]Issue, error)
+	GetIssuesByEndDate(ctx context.Context, arg GetIssuesByEndDateParams) ([]Issue, error)
+	GetIssuesByLabel(ctx context.Context, arg GetIssuesByLabelParams) ([]Issue, error)
+	GetIssuesByPriority(ctx context.Context, arg GetIssuesByPriorityParams) ([]Issue, error)
+	GetIssuesByProject(ctx context.Context, arg GetIssuesByProjectParams) ([]Issue, error)
+	GetIssuesByStatus(ctx context.Context, arg GetIssuesByStatusParams) ([]Issue, error)
+	GetIssuesByTeamID(ctx context.Context, teamID string) ([]Issue, error)
+	GetLeaderByProjectID(ctx context.Context, id string) (interface{}, error)
+	GetLeaderByTeamID(ctx context.Context, id string) (interface{}, error)
+	GetOwnerByProjectID(ctx context.Context, id string) (string, error)
 	GetOwnerByTeamID(ctx context.Context, id string) (string, error)
 	GetProjectByID(ctx context.Context, id string) (Project, error)
-	GetProjectsByUserID(ctx context.Context, userID string) ([]Project, error)
+	GetProjectsByUserID(ctx context.Context, arg GetProjectsByUserIDParams) ([]Project, error)
 	GetTeamByID(ctx context.Context, id string) (Team, error)
+	GetTeamIDByViewID(ctx context.Context, id string) (string, error)
 	GetTeamsByUserID(ctx context.Context, userID string) ([]Team, error)
 	GetUserByEmailWithPassword(ctx context.Context, email string) (GetUserByEmailWithPasswordRow, error)
 	GetUserByEmailWithoutPassword(ctx context.Context, email string) (GetUserByEmailWithoutPasswordRow, error)
 	GetUserByID(ctx context.Context, id string) (GetUserByIDRow, error)
-	GetViewByID(ctx context.Context, id string) (View, error)
+	GetViewByID(ctx context.Context, id string) ([]View, error)
 	GetWorkspaceByID(ctx context.Context, id string) (Workspace, error)
 	GetWorkspaceByUserID(ctx context.Context, ownerID string) ([]Workspace, error)
 	IsMemberInTeam(ctx context.Context, arg IsMemberInTeamParams) (int64, error)
 	IsProjectExists(ctx context.Context, id string) (int64, error)
 	IsTeamExists(ctx context.Context, id string) (int64, error)
 	ListAssigneesByIssueID(ctx context.Context, issueID string) ([]User, error)
-	ListGroupBysByViewID(ctx context.Context, viewID string) ([]string, error)
+	ListGroupByViewID(ctx context.Context, viewID string) ([]string, error)
 	ListIssuesByProjectID(ctx context.Context, projectID sql.NullString) ([]Issue, error)
 	ListIssuesByTeamID(ctx context.Context, teamID string) ([]Issue, error)
 	ListIssuesByUserID(ctx context.Context, userID string) ([]ListIssuesByUserIDRow, error)
@@ -57,21 +66,25 @@ type Querier interface {
 	ListTeamMembers(ctx context.Context, teamID string) ([]ListTeamMembersRow, error)
 	ListTeams(ctx context.Context) ([]Team, error)
 	ListUsers(ctx context.Context) ([]ListUsersRow, error)
-	ListViewsByUser(ctx context.Context, userID string) ([]View, error)
+	ListViewByTeamID(ctx context.Context, teamID string) ([]View, error)
+	ListViewsByUser(ctx context.Context, createdBy string) ([]View, error)
 	ListWorkspaceMembers(ctx context.Context, workspaceID string) ([]User, error)
 	ListWorkspacesWithMembersByUserID(ctx context.Context, arg ListWorkspacesWithMembersByUserIDParams) ([]ListWorkspacesWithMembersByUserIDRow, error)
 	RemoveAssigneeFromIssue(ctx context.Context, arg RemoveAssigneeFromIssueParams) error
-	RemoveGroupByFromView(ctx context.Context, arg RemoveGroupByFromViewParams) error
-	RemoveIssueFromView(ctx context.Context, arg RemoveIssueFromViewParams) error
+	RemoveGroupByFromView(ctx context.Context, viewID string) error
+	RemoveIssueFromView(ctx context.Context, viewID string) error
 	RemoveMemberFromProject(ctx context.Context, arg RemoveMemberFromProjectParams) error
 	RemoveMemberFromTeam(ctx context.Context, arg RemoveMemberFromTeamParams) error
 	RemoveMemberFromWorkspace(ctx context.Context, arg RemoveMemberFromWorkspaceParams) error
+	RenameTeam(ctx context.Context, arg RenameTeamParams) error
 	RenameWorkspace(ctx context.Context, arg RenameWorkspaceParams) error
+	SetLeaderToTeam(ctx context.Context, arg SetLeaderToTeamParams) error
 	UpdateEmail(ctx context.Context, arg UpdateEmailParams) error
-	UpdateProject(ctx context.Context, arg UpdateProjectParams) error
 	UpdateRoles(ctx context.Context, arg UpdateRolesParams) error
-	UpdateTeam(ctx context.Context, arg UpdateTeamParams) error
 	UpdateUsername(ctx context.Context, arg UpdateUsernameParams) error
+	UpdateViewGroupBy(ctx context.Context, arg UpdateViewGroupByParams) error
+	UpdateViewName(ctx context.Context, arg UpdateViewNameParams) error
+	UpdateViewTeamID(ctx context.Context, arg UpdateViewTeamIDParams) error
 }
 
 var _ Querier = (*Queries)(nil)

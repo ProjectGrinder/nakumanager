@@ -48,5 +48,8 @@ func (m *MockIssueRepo) RemoveAssigneeFromIssue(ctx context.Context, data db.Rem
 
 func (m *MockIssueRepo) GetIssueByUserID(ctx context.Context, userID string) ([]db.Issue, error) {
 	args := m.Called(ctx, userID)
-	return args.Get(0).([]db.Issue), args.Error(1)
+	if data := args.Get(0); data != nil {
+		return data.([]db.Issue), args.Error(1)
+	}
+	return nil, args.Error(1)
 }

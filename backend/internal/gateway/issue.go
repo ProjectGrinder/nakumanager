@@ -7,9 +7,8 @@ import (
 
 func SetUpIssueRoutes(api fiber.Router, h *routes.IssueHandler) {
 	api.Post("/issues", h.CreateIssue)
-	api.Post("/issues/assignee", h.AddAssigneeToIssue)
-	api.Delete("/issues/assignee", h.RemoveAssigneeFromIssue)
-	api.Get("/issues/:id", h.GetIssuesByUserID)
+	api.Patch("/issues/:id", h.UpdateIssue)
+	api.Get("/issues", h.GetIssuesByUserID)
 	api.Delete("/issues/:id", h.DeleteIssue)
 
 }

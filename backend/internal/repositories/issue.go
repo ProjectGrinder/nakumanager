@@ -45,7 +45,6 @@ func (r *issueRepo) ListAssigneesByIssueID(ctx context.Context, issueID string) 
 	return r.queries.ListAssigneesByIssueID(ctx, issueID)
 }
 
-
 func (r *issueRepo) ListIssuesByTeamID(ctx context.Context, teamID string) ([]db.Issue, error) {
 	return r.queries.ListIssuesByTeamID(ctx, teamID)
 }
@@ -55,6 +54,5 @@ func (r *issueRepo) RemoveAssigneeFromIssue(ctx context.Context, data db.RemoveA
 }
 
 func (r *issueRepo) GetIssueByUserID(ctx context.Context, userID string) ([]db.Issue, error) {
-	return r.queries.GetIssueByUserID(ctx, userID)
+	return r.queries.GetIssueByUserID(ctx, db.GetIssueByUserIDParams{UserID: userID, OwnerID: userID})
 }
-

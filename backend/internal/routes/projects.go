@@ -2,76 +2,42 @@ package routes
 
 import (
 	"database/sql"
-	"errors"
-	"log"
 	"strings"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"github.com/nack098/nakumanager/internal/db"
 	models "github.com/nack098/nakumanager/internal/models"
 	"github.com/nack098/nakumanager/internal/repositories"
+	"github.com/nack098/nakumanager/internal/ws"
 )
 
 type ProjectHandler struct {
+	DB       *sql.DB
 	Repo     repositories.ProjectRepository
 	TeamRepo repositories.TeamRepository
 }
 
-func NewProjectHandler(repo repositories.ProjectRepository, teamRepo repositories.TeamRepository) *ProjectHandler {
+func NewProjectHandler(db *sql.DB, repo repositories.ProjectRepository, teamRepo repositories.TeamRepository) *ProjectHandler {
 	return &ProjectHandler{
+		DB:       db,
 		Repo:     repo,
 		TeamRepo: teamRepo,
 	}
 }
 
-func toNullString(s *string) sql.NullString {
-	if s != nil && strings.TrimSpace(*s) != "" {
-		return sql.NullString{String: *s, Valid: true}
-	}
-	return sql.NullString{}
-}
-
-func toNullTime(s *string) sql.NullTime {
-	if s != nil {
-		if t, err := time.Parse(time.RFC3339, *s); err == nil {
-			return sql.NullTime{Time: t, Valid: true}
-		}
-	}
-	return sql.NullTime{}
-}
-
-func nullStringToString(ns sql.NullString) string {
-	if ns.Valid {
-		return ns.String
-	}
-	return ""
-}
-
 func (h *ProjectHandler) CreateProject(c *fiber.Ctx) error {
-	var body models.CreateProjectRequest
+	var body models.CreateProject
 
 	if err := c.BodyParser(&body); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
 	}
 
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
-
-	// Validate required fields
-	if strings.TrimSpace(body.Name) == "" || strings.TrimSpace(body.WorkspaceID) == "" || strings.TrimSpace(body.TeamID) == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "name, workspace_id, and team_id are required"})
-	}
+	// Check if the user is authenticated
+	userID := c.Locals("userID").(string)
 
 	// ตรวจสอบทีมมีอยู่จริงและอยู่ใน workspace เดียวกัน
 	team, err := h.TeamRepo.GetTeamByID(c.Context(), body.TeamID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "team not found"})
-		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to check team"})
 	}
 
@@ -89,165 +55,115 @@ func (h *ProjectHandler) CreateProject(c *fiber.Ctx) error {
 	}
 
 	projectID := uuid.NewString()
-
-	arg := db.CreateProjectParams{
-		ID:          projectID,
-		Name:        body.Name,
-		Status:      toNullString(body.Status),
-		Priority:    toNullString(body.Priority),
-		WorkspaceID: body.WorkspaceID,
-		TeamID:      body.TeamID,
-		LeaderID:    toNullString(body.LeaderID),
-		StartDate:   toNullTime(body.StartDate),
-		EndDate:     toNullTime(body.EndDate),
-		Label:       toNullString(body.Label),
-		CreatedBy:   userID,
+	body.ID = projectID
+	if body.LeaderID != nil && strings.TrimSpace(*body.LeaderID) == "" {
+		body.LeaderID = nil
 	}
+	body.CreatedBy = userID
 
-	if err := h.Repo.CreateProject(c.Context(), arg); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to create project"})
+	// สร้างโปรเจกต์
+	if err := h.Repo.CreateProject(c.Context(), body); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"message": "Project created successfully"})
 }
 
-func (h *ProjectHandler) AddMemberToProject(c *fiber.Ctx) error {
-	var request db.AddMemberToProjectParams
-	if err := c.BodyParser(&request); err != nil {
-		log.Println("Error parsing request body:", err)
+func (h *ProjectHandler) UpdateProject(c *fiber.Ctx) error {
+	projectID := c.Params("id")
+	if projectID == "" || projectID == "undefined" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing project ID"})
+	}
+
+	var body models.EditProject
+	if err := c.BodyParser(&body); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
 	}
-	if request.ProjectID == "" || request.UserID == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "project_id and user_id are required"})
-	}
 
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
+	userID := c.Locals("userID").(string)
 
-	project, err := h.Repo.GetProjectByID(c.Context(), request.ProjectID)
+	// ตรวจสอบงาสคนที่แก้ไขคือ Owner ไม่ก็ Leader
+	owner, err := h.Repo.GetOwnerByProjectID(c.Context(), projectID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "project not found"})
+	}
+	if owner != userID {
+		leader, err := h.Repo.GetLeaderByProjectID(c.Context(), projectID)
+		if err != nil {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "project not found"})
 		}
-		log.Println("Error fetching project:", err)
+		if leader != userID {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "you are not authorized to update this project"})
+		}
+	}
+
+	// ตรวจสอบว่า project มีอยู่จริง
+	_, err = h.Repo.GetProjectByID(c.Context(), projectID)
+	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to fetch project"})
 	}
 
-	// ตรวจสอบว่า userID เป็น created_by หรือ leader ของโปรเจกต์หรือไม่
-	if project.CreatedBy != userID && nullStringToString(project.LeaderID) != userID {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "only project creator or leader can add members"})
-	}
+	body.ID = projectID
+	query, args := buildUpdateQuery(body)
 
-	// ตรวจสอบว่าผู้ใช้ที่จะเพิ่มอยู่ใน team ของโปรเจกต์หรือไม่
-	isMember, err := h.TeamRepo.IsMemberInTeam(c.Context(), project.TeamID, request.UserID)
-	if err != nil {
-		log.Println("Error checking team membership:", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to check team membership"})
-	}
-	if !isMember {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "user is not a member of the team"})
-	}
-	
-	// เพิ่มสมาชิก
-	if err := h.Repo.AddMemberToProject(c.Context(), request); err != nil {
-		log.Println("Error adding member to project:", err)
-		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
-			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "member already exists in project"})
+	if body.AddMember != nil && len(*body.AddMember) > 0 {
+		for _, member := range *body.AddMember {
+			h.Repo.AddMemberToProject(c.Context(), projectID, member)
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to add member to project"})
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"message": "Member added to project successfully"})
-}
-
-func (h *ProjectHandler) RemoveProjectMembers(c *fiber.Ctx) error {
-	var request db.RemoveMemberFromProjectParams
-	if err := c.BodyParser(&request); err != nil {
-		log.Println("Error parsing request body:", err)
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
-	}
-	if request.ProjectID == "" || request.UserID == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "project_id and user_id are required"})
-	}
-
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
-
-	project, err := h.Repo.GetProjectByID(c.Context(), request.ProjectID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "project not found"})
+	if body.RemoveMember != nil && len(*body.RemoveMember) > 0 {
+		for _, member := range *body.RemoveMember {
+			h.Repo.RemoveMemberFromProject(c.Context(), projectID, member)
 		}
-		log.Println("Error fetching project:", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to fetch project"})
 	}
 
-	// ตรวจสอบว่า userID เป็น created_by หรือ leader ของโปรเจกต์หรือไม่
-	if project.CreatedBy != userID && nullStringToString(project.LeaderID) != userID {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "only project creator or leader can remove members"})
+	if _, err := h.DB.ExecContext(c.Context(), query, args...); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update project"})
 	}
 
-	// ลบสมาชิก
-	if err := h.Repo.RemoveMemberFromProject(c.Context(), request); err != nil {
-		log.Println("Error removing member from project:", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to remove member from project"})
-	}
+	ws.BroadcastToRoom("project", projectID, "project_updated", body)
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Member removed from project successfully"})
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Project updated successfully"})
 }
-
 
 func (h *ProjectHandler) GetProjectsByUserID(c *fiber.Ctx) error {
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
+	userID := c.Locals("userID").(string)
 
+	// ดึงโปรเจกต์
 	projects, err := h.Repo.GetProjectsByUserID(c.Context(), userID)
 	if err != nil {
-		log.Println("Error fetching projects by user ID:", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to fetch projects"})
 	}
 
 	return c.JSON(projects)
 }
 
-
 func (h *ProjectHandler) DeleteProject(c *fiber.Ctx) error {
+	// ตรวจสอบ param
 	projectID := c.Params("id")
-	if strings.TrimSpace(projectID) == "" {
+	if strings.TrimSpace(projectID) == "" || projectID == "undefined" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "project_id is required"})
 	}
 
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
+	// ตรวจสอบสิทธิ์
+	userID := c.Locals("userID").(string)
 
+	// ตรวจสอบว่า project มีอยู่
 	project, err := h.Repo.GetProjectByID(c.Context(), projectID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "project not found"})
-		}
-		log.Println("Error fetching project:", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to fetch project"})
 	}
 
-	// ✅ ตรวจสอบสิทธิ์: เฉพาะ creator หรือ leader เท่านั้นที่ลบได้
-	if project.CreatedBy != userID && nullStringToString(project.LeaderID) != userID {
+	// ตรวจสอบว่าผู้ใช้เป็น Owner หรือ Leader
+	if project.CreatedBy != userID && project.LeaderID != userID {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "only project creator or leader can delete project"})
 	}
 
-	// ✅ ลบโปรเจกต์
+	// ลบ
 	if err := h.Repo.DeleteProject(c.Context(), projectID); err != nil {
-		log.Println("Error deleting project:", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to delete project"})
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Project deleted successfully"})
 }
-

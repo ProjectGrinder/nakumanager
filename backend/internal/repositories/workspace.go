@@ -9,9 +9,7 @@ import (
 type WorkspaceRepository interface {
 	CreateWorkspace(ctx context.Context, id string, name string, ownerID string) error
 	GetWorkspaceByID(ctx context.Context, id string) (db.Workspace, error)
-	GetWorkspaceByUserID(ctx context.Context, userID string) ([]db.Workspace, error)
 	DeleteWorkspace(ctx context.Context, id string) error
-	ListWorkspaceMembers(ctx context.Context, workspaceID string) ([]db.User, error)
 	AddMemberToWorkspace(ctx context.Context, workspaceID, userID string) error
 	RemoveMemberFromWorkspace(ctx context.Context, workspaceID, userID string) error
 	RenameWorkspace(ctx context.Context, id string, newName string) error
@@ -38,21 +36,11 @@ func (r *workspaceRepo) GetWorkspaceByID(ctx context.Context, id string) (db.Wor
 	return r.queries.GetWorkspaceByID(ctx, id)
 }
 
-func (r *workspaceRepo) GetWorkspaceByUserID(ctx context.Context, userID string) ([]db.Workspace, error) {
-	workspaces, err := r.queries.GetWorkspaceByUserID(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	return workspaces, nil
-}
 
 func (r *workspaceRepo) DeleteWorkspace(ctx context.Context, id string) error {
 	return r.queries.DeleteWorkspace(ctx, id)
 }
 
-func (r *workspaceRepo) ListWorkspaceMembers(ctx context.Context, workspaceID string) ([]db.User, error) {
-	return r.queries.ListWorkspaceMembers(ctx, workspaceID)
-}
 
 func (r *workspaceRepo) AddMemberToWorkspace(ctx context.Context, workspaceID, userID string) error {
 	return r.queries.AddMemberToWorkspace(ctx, db.AddMemberToWorkspaceParams{

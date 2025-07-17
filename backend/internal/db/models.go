@@ -14,7 +14,6 @@ type Issue struct {
 	Content   sql.NullString `json:"content"`
 	Priority  sql.NullString `json:"priority"`
 	Status    string         `json:"status"`
-	Assignee  sql.NullString `json:"assignee"`
 	ProjectID sql.NullString `json:"project_id"`
 	TeamID    string         `json:"team_id"`
 	StartDate sql.NullTime   `json:"start_date"`
@@ -29,17 +28,17 @@ type IssueAssignee struct {
 }
 
 type Project struct {
-	ID          string         `json:"id"`
-	Name        string         `json:"name"`
-	Status      sql.NullString `json:"status"`
-	Priority    sql.NullString `json:"priority"`
-	WorkspaceID string         `json:"workspace_id"`
-	TeamID      string         `json:"team_id"`
-	LeaderID    sql.NullString `json:"leader_id"`
-	StartDate   sql.NullTime   `json:"start_date"`
-	EndDate     sql.NullTime   `json:"end_date"`
-	Label       sql.NullString `json:"label"`
-	CreatedBy   string         `json:"created_by"`
+	ID          string      `json:"id"`
+	Name        string      `json:"name"`
+	Status      interface{} `json:"status"`
+	Priority    interface{} `json:"priority"`
+	WorkspaceID string      `json:"workspace_id"`
+	TeamID      string      `json:"team_id"`
+	LeaderID    interface{} `json:"leader_id"`
+	StartDate   interface{} `json:"start_date"`
+	EndDate     interface{} `json:"end_date"`
+	Label       interface{} `json:"label"`
+	CreatedBy   string      `json:"created_by"`
 }
 
 type ProjectMember struct {
@@ -48,10 +47,10 @@ type ProjectMember struct {
 }
 
 type Team struct {
-	ID          string         `json:"id"`
-	Name        string         `json:"name"`
-	WorkspaceID string         `json:"workspace_id"`
-	LeaderID    sql.NullString `json:"leader_id"`
+	ID          string      `json:"id"`
+	Name        string      `json:"name"`
+	WorkspaceID string      `json:"workspace_id"`
+	LeaderID    interface{} `json:"leader_id"`
 }
 
 type TeamMember struct {
@@ -68,10 +67,10 @@ type User struct {
 }
 
 type View struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	UserID string `json:"user_id"`
-	TeamID string `json:"team_id"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	CreatedBy string `json:"created_by"`
+	TeamID    string `json:"team_id"`
 }
 
 type ViewGroupBy struct {

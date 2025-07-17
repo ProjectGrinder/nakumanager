@@ -50,24 +50,16 @@ func (q *Queries) DeleteTeam(ctx context.Context, id string) error {
 	return err
 }
 
-const deleteTeamFromTeamMembers = `-- name: DeleteTeamFromTeamMembers :exec
-DELETE FROM team_members WHERE team_id = ?
-`
-
-func (q *Queries) DeleteTeamFromTeamMembers(ctx context.Context, teamID string) error {
-	_, err := q.db.ExecContext(ctx, deleteTeamFromTeamMembers, teamID)
-	return err
-}
-
 const getLeaderByTeamID = `-- name: GetLeaderByTeamID :one
 SELECT leader_id
 FROM teams
 WHERE id = ?
 `
 
-func (q *Queries) GetLeaderByTeamID(ctx context.Context, id string) (sql.NullString, error) {
+
+func (q *Queries) GetLeaderByTeamID(ctx context.Context, id string) (interface{}, error) {
 	row := q.db.QueryRowContext(ctx, getLeaderByTeamID, id)
-	var leader_id sql.NullString
+	var leader_id interface{}
 	err := row.Scan(&leader_id)
 	return leader_id, err
 }
@@ -171,7 +163,7 @@ func (q *Queries) IsTeamExists(ctx context.Context, id string) (int64, error) {
 }
 
 const listIssuesByUserID = `-- name: ListIssuesByUserID :many
-SELECT i.id, i.title, i.status, i.priority, i.project_id, i.assignee
+SELECT i.id, i.title, i.status, i.priority, i.project_id
 FROM issues i
 JOIN project_members pm ON i.project_id = pm.project_id
 WHERE pm.user_id = ?
@@ -183,7 +175,6 @@ type ListIssuesByUserIDRow struct {
 	Status    string         `json:"status"`
 	Priority  sql.NullString `json:"priority"`
 	ProjectID sql.NullString `json:"project_id"`
-	Assignee  sql.NullString `json:"assignee"`
 }
 
 func (q *Queries) ListIssuesByUserID(ctx context.Context, userID string) ([]ListIssuesByUserIDRow, error) {
@@ -201,7 +192,6 @@ func (q *Queries) ListIssuesByUserID(ctx context.Context, userID string) ([]List
 			&i.Status,
 			&i.Priority,
 			&i.ProjectID,
-			&i.Assignee,
 		); err != nil {
 			return nil, err
 		}
@@ -301,19 +291,34 @@ func (q *Queries) RemoveMemberFromTeam(ctx context.Context, arg RemoveMemberFrom
 	return err
 }
 
-const updateTeam = `-- name: UpdateTeam :exec
+const renameTeam = `-- name: RenameTeam :exec
 UPDATE teams
-SET name = ?, leader_id = ?
+SET name = ?
 WHERE id = ?
 `
 
-type UpdateTeamParams struct {
-	Name     string         `json:"name"`
-	LeaderID sql.NullString `json:"leader_id"`
-	ID       string         `json:"id"`
+type RenameTeamParams struct {
+	Name string `json:"name"`
+	ID   string `json:"id"`
 }
 
-func (q *Queries) UpdateTeam(ctx context.Context, arg UpdateTeamParams) error {
-	_, err := q.db.ExecContext(ctx, updateTeam, arg.Name, arg.LeaderID, arg.ID)
+func (q *Queries) RenameTeam(ctx context.Context, arg RenameTeamParams) error {
+	_, err := q.db.ExecContext(ctx, renameTeam, arg.Name, arg.ID)
+	return err
+}
+
+const setLeaderToTeam = `-- name: SetLeaderToTeam :exec
+UPDATE teams
+SET leader_id = ?
+WHERE id = ?
+`
+
+type SetLeaderToTeamParams struct {
+	LeaderID interface{} `json:"leader_id"`
+	ID       string      `json:"id"`
+}
+
+func (q *Queries) SetLeaderToTeam(ctx context.Context, arg SetLeaderToTeamParams) error {
+	_, err := q.db.ExecContext(ctx, setLeaderToTeam, arg.LeaderID, arg.ID)
 	return err
 }

@@ -1,123 +1,71 @@
 package ws_test
 
 import (
-	"encoding/json"
-	"net/http/httptest"
+	"sync"
 	"testing"
-	"time"
 
-	fiberWs "github.com/gofiber/contrib/websocket"
-	"github.com/gofiber/fiber/v2"
-	gorillaWs "github.com/gorilla/websocket"
 	"github.com/nack098/nakumanager/internal/ws"
 	"github.com/stretchr/testify/assert"
 )
 
-func ParseWebSocketMessage(msg []byte) (string, json.RawMessage, error) {
-	var message struct {
-		Event string          `json:"event"`
-		Data  json.RawMessage `json:"data"`
+var mu sync.Mutex
+
+func TestRegisterAndBroadcast(t *testing.T) {
+	mock := &ws.MockConn{}
+	userID := "u1"
+	roomType := "workspace"
+	roomID := "abc"
+
+	ws.RegisterToRoom(userID, mock, roomType, roomID)
+	ws.BroadcastToRoom(roomType, roomID, "test_event", "hello")
+
+	if len(mock.Messages) != 1 {
+		t.Fatalf("Expected 1 message, got %d", len(mock.Messages))
 	}
-	err := json.Unmarshal(msg, &message)
-	return message.Event, message.Data, err
 }
 
-func TestWebSocketMiddleware_Upgrade(t *testing.T) {
-	app := fiber.New()
+func TestUnregisterFromRoom(t *testing.T) {
+	userID := "user-1"
+	roomType := "workspace"
+	roomID := "room-123"
+	key := roomType + "_" + roomID
 
-	app.Use(ws.WebSocketMiddleware, func(c *fiber.Ctx) error {
-		return c.SendStatus(fiber.StatusOK)
-	})
+	mock := &ws.MockConn{}
+	ws.SetConnectionForTest(key, userID, mock)
 
-	req := httptest.NewRequest("GET", "/", nil)
-	req.Header.Set("Upgrade", "websocket")
-	req.Header.Set("Connection", "Upgrade")
+	ws.UnregisterFromRoom(userID, roomType, roomID)
 
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+	exists := ws.HasRoom(key)
+	assert.False(t, exists, "Room should be removed after last user leaves")
 }
 
-func TestWebSocketMiddleware_NonUpgrade(t *testing.T) {
-	app := fiber.New()
+func TestBroadcastToRoom(t *testing.T) {
+	roomType := "workspace"
+	roomID := "room-123"
+	event := "test_event"
+	payload := map[string]string{"msg": "hello"}
+	key := ws.RoomKey(roomType, roomID)
+	userID1 := "user1"
+	userID2 := "user2"
 
-	app.Use(ws.WebSocketMiddleware)
+	mock1 := &ws.MockConn{}
+	mock2 := &ws.MockConn{}
 
-	req := httptest.NewRequest("GET", "/", nil)
+	ws.SetConnectionForTest(key, userID1, mock1)
+	ws.SetConnectionForTest(key, userID2, mock2)
 
-	resp, err := app.Test(req, -1)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusUpgradeRequired, resp.StatusCode)
-}
+	mu.Lock()
+	ws.BroadcastToRoom(roomType, roomID, event, payload)
+	defer mu.Unlock()
 
-func TestParseWebSocketMessage_Success(t *testing.T) {
-	msg := []byte(`{"event": "update_project", "data": {"id": 1}}`)
+	assert.Len(t, mock1.Messages, 1, "mock1 should receive 1 message")
+	assert.Len(t, mock2.Messages, 1, "mock2 should receive 1 message")
 
-	event, data, err := ParseWebSocketMessage(msg)
+	msg1 := mock1.Messages[0].(map[string]interface{})
+	msg2 := mock2.Messages[0].(map[string]interface{})
 
-	assert.NoError(t, err)
-	assert.Equal(t, "update_project", event)
-	assert.JSONEq(t, `{"id": 1}`, string(data))
-}
-
-func TestParseWebSocketMessage_InvalidJSON(t *testing.T) {
-	msg := []byte(`invalid json`)
-
-	_, _, err := ParseWebSocketMessage(msg)
-
-	assert.Error(t, err)
-}
-
-func setupWebSocketApp() *fiber.App {
-	app := fiber.New()
-
-	app.Use("/ws", ws.WebSocketMiddleware)
-	app.Get("/ws", fiberWs.New(ws.CentralWebSocketHandler))
-
-	return app
-}
-
-func TestCentralWebSocketHandler_JSONError(t *testing.T) {
-	app := setupWebSocketApp()
-
-	go func() {
-		err := app.Listen(":3000")
-		if err != nil {
-			t.Log("Server error:", err)
-		}
-	}()
-	defer app.Shutdown()
-
-	time.Sleep(100 * time.Millisecond)
-
-	url := "ws://localhost:3000/ws"
-	wsConn, _, err := gorillaWs.DefaultDialer.Dial(url, nil)
-	assert.NoError(t, err)
-	defer wsConn.Close()
-
-	err = wsConn.WriteMessage(gorillaWs.TextMessage, []byte(`invalid json`))
-	assert.NoError(t, err)
-}
-
-func TestCentralWebSocketHandler_UnknownEvent(t *testing.T) {
-	app := setupWebSocketApp()
-
-	go func() {
-		err := app.Listen(":3000")
-		if err != nil {
-			t.Log("Server error:", err)
-		}
-	}()
-	defer app.Shutdown()
-
-	time.Sleep(100 * time.Millisecond)
-
-	url := "ws://localhost:3000/ws"
-	wsConn, _, err := gorillaWs.DefaultDialer.Dial(url, nil)
-	assert.NoError(t, err)
-	defer wsConn.Close()
-
-	message := []byte(`{"event":"some_event", "data":{}}`)
-	err = wsConn.WriteMessage(gorillaWs.TextMessage, message)
-	assert.NoError(t, err)
+	assert.Equal(t, event, msg1["type"])
+	assert.Equal(t, payload, msg1["data"])
+	assert.Equal(t, event, msg2["type"])
+	assert.Equal(t, payload, msg2["data"])
 }

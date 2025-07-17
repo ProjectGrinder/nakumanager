@@ -2,6 +2,7 @@ package routes
 
 import (
 	"database/sql"
+	"errors"
 	"log"
 	"time"
 
@@ -11,61 +12,50 @@ import (
 	"github.com/nack098/nakumanager/internal/db"
 	models "github.com/nack098/nakumanager/internal/models"
 	"github.com/nack098/nakumanager/internal/repositories"
+	"github.com/nack098/nakumanager/internal/ws"
 )
 
 type IssueHandler struct {
+	DB          *sql.DB
 	Repo        repositories.IssueRepository
 	TeamRepo    repositories.TeamRepository
 	ProjectRepo repositories.ProjectRepository
 }
 
-func NewIssueHandler(repo repositories.IssueRepository, teamRepo repositories.TeamRepository, projectRepo repositories.ProjectRepository) *IssueHandler {
+func NewIssueHandler(db *sql.DB, repo repositories.IssueRepository, teamRepo repositories.TeamRepository, projectRepo repositories.ProjectRepository) *IssueHandler {
 	return &IssueHandler{
+		DB:          db,
 		Repo:        repo,
 		TeamRepo:    teamRepo,
 		ProjectRepo: projectRepo,
 	}
 }
 
-func ToNullTime(t *time.Time) sql.NullTime {
-	if t == nil {
-		return sql.NullTime{Valid: false}
-	}
-	return sql.NullTime{Time: *t, Valid: true}
-}
-
 func (h *IssueHandler) CreateIssue(c *fiber.Ctx) error {
 	var issueReq models.IssueCreate
 	if err := c.BodyParser(&issueReq); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
-		})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Unauthorized",
-		})
-	}
+	userID := c.Locals("userID").(string)
 	issueReq.OwnerID = userID
 
-	validate := validator.New()
-	if err := validate.Struct(&issueReq); err != nil {
+	if err := validator.New().Struct(&issueReq); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error":  "Validation failed",
 			"detail": err.Error(),
 		})
 	}
 
-	teamExists, err := h.TeamRepo.IsTeamExists(c.Context(), issueReq.TeamID)
+	ctx := c.Context()
+
+	// ตรวจสอบทีม
+	teamExists, err := h.TeamRepo.IsTeamExists(ctx, issueReq.TeamID)
 	if err != nil || !teamExists {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Team not found",
-		})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Team not found"})
 	}
 
-	isMember, err := h.TeamRepo.IsMemberInTeam(c.Context(), issueReq.TeamID, userID)
+	isMember, err := h.TeamRepo.IsMemberInTeam(ctx, issueReq.TeamID, userID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to check team membership"})
 	}
@@ -73,28 +63,18 @@ func (h *IssueHandler) CreateIssue(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "you are not a member of the team"})
 	}
 
+	// ตรวจสอบโปรเจกต์
 	if issueReq.ProjectID != nil {
-		projectExists, err := h.ProjectRepo.IsProjectExists(c.Context(), *issueReq.ProjectID)
+		projectExists, err := h.ProjectRepo.IsProjectExists(ctx, *issueReq.ProjectID)
 		if err != nil || !projectExists {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "Project not found",
-			})
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Project not found"})
 		}
 	}
 
-	if issueReq.Assignee != nil {
-		userExists, err := h.TeamRepo.IsMemberInTeam(c.Context(), issueReq.TeamID, *issueReq.Assignee)
-		if err != nil || !userExists {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "Assignee not found",
-			})
-		}
-	}
-
+	// กำหนดค่า default
 	if issueReq.Status == "" {
 		issueReq.Status = "todo"
 	}
-
 	if issueReq.Priority == nil {
 		def := "low"
 		issueReq.Priority = &def
@@ -104,6 +84,7 @@ func (h *IssueHandler) CreateIssue(c *fiber.Ctx) error {
 		issueReq.StartDate = &now
 	}
 
+	// สร้าง issue
 	issueReq.ID = uuid.New().String()
 	body := db.CreateIssueParams{
 		ID:        issueReq.ID,
@@ -111,7 +92,6 @@ func (h *IssueHandler) CreateIssue(c *fiber.Ctx) error {
 		Content:   ToNullString(issueReq.Content),
 		Priority:  ToNullString(issueReq.Priority),
 		Status:    issueReq.Status,
-		Assignee:  ToNullString(issueReq.Assignee),
 		ProjectID: ToNullString(issueReq.ProjectID),
 		TeamID:    issueReq.TeamID,
 		StartDate: ToNullTime(issueReq.StartDate),
@@ -120,11 +100,31 @@ func (h *IssueHandler) CreateIssue(c *fiber.Ctx) error {
 		OwnerID:   issueReq.OwnerID,
 	}
 
-	if err := h.Repo.CreateIssue(c.Context(), body); err != nil {
+	if err := h.Repo.CreateIssue(ctx, body); err != nil {
 		log.Printf("Failed to create issue: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to create issue",
-		})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create issue"})
+	}
+
+	// เพิ่ม assignees ถ้ามี
+	if issueReq.Assignee != nil {
+		for _, userID := range *issueReq.Assignee {
+			isValid, err := h.TeamRepo.IsMemberInTeam(ctx, issueReq.TeamID, userID)
+			if err != nil {
+				log.Printf("Failed to check assignee %s: %v", userID, err)
+				continue
+			}
+			if !isValid {
+				log.Printf("User %s is not a member of the team", userID)
+				continue
+			}
+			err = h.Repo.AddAssigneeToIssue(ctx, db.AddAssigneeToIssueParams{
+				IssueID: issueReq.ID,
+				UserID:  userID,
+			})
+			if err != nil {
+				log.Printf("Failed to add assignee %s: %v", userID, err)
+			}
+		}
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
@@ -133,73 +133,164 @@ func (h *IssueHandler) CreateIssue(c *fiber.Ctx) error {
 	})
 }
 
-func (h *IssueHandler) AddAssigneeToIssue(c *fiber.Ctx) error {
-	var assigneeReq models.AssigneeRequest
-	if err := c.BodyParser(&assigneeReq); err != nil {
+func (h *IssueHandler) UpdateIssue(c *fiber.Ctx) error {
+	var req models.UpdateIssueRequest
+	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
+			"error": "invalid request body",
 		})
 	}
 
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Unauthorized",
+	req.ID = c.Params("id")
+	if req.ID == "" || req.ID == "undefined" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "missing issue ID",
 		})
 	}
 
-	if err := h.Repo.AddAssigneeToIssue(c.Context(), db.AddAssigneeToIssueParams{
-		IssueID: assigneeReq.IssueID,
-		UserID:  assigneeReq.UserID,
-	}); err != nil {
-		log.Printf("Failed to add assignee to issue: %v", err)
+	userID := c.Locals("userID").(string)
+
+	ctx := c.Context()
+
+	issue, err := h.Repo.GetIssueByID(ctx, req.ID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "issue not found",
+			})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to add assignee to issue",
+			"error": "failed to fetch issue",
 		})
 	}
+
+	isOwner := issue.OwnerID == userID
+	isTeamMember, err := h.TeamRepo.IsMemberInTeam(ctx, issue.TeamID, userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to check team membership",
+		})
+	}
+
+	if !isOwner && !isTeamMember {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "you are not authorized to update this issue",
+		})
+	}
+
+	if req.AddAssignee != nil {
+		for _, assigneeID := range *req.AddAssignee {
+			valid, err := h.TeamRepo.IsMemberInTeam(ctx, issue.TeamID, assigneeID)
+			if err != nil {
+				log.Printf("Error checking assignee %s: %v", assigneeID, err)
+				continue
+			}
+			if !valid {
+				log.Printf("User %s is not a member of the team %s", assigneeID, issue.TeamID)
+				continue
+			}
+			if err := h.Repo.AddAssigneeToIssue(ctx, db.AddAssigneeToIssueParams{
+				IssueID: issue.ID,
+				UserID:  assigneeID,
+			}); err != nil {
+				log.Printf("Error adding assignee %s: %v", assigneeID, err)
+			} else {
+				log.Printf("Successfully added assignee %s to issue %s", assigneeID, issue.ID)
+			}
+		}
+	}
+
+	if req.RemoveAssignee != nil {
+		for _, assigneeID := range *req.RemoveAssignee {
+			valid, err := h.TeamRepo.IsMemberInTeam(ctx, issue.TeamID, assigneeID)
+			if err != nil {
+				log.Printf("Error checking assignee %s: %v", assigneeID, err)
+				continue
+			}
+			if !valid {
+				log.Printf("User %s is not a member of the team %s", assigneeID, issue.TeamID)
+				continue
+			}
+			if err := h.Repo.RemoveAssigneeFromIssue(ctx, db.RemoveAssigneeFromIssueParams{
+				IssueID: issue.ID,
+				UserID:  assigneeID,
+			}); err != nil {
+				log.Printf("Error removing assignee %s: %v", assigneeID, err)
+			} else {
+				log.Printf("Successfully removed assignee %s from issue %s", assigneeID, issue.ID)
+			}
+		}
+	}
+
+	query, args := buildUpdateIssueQuery(req)
+	if query != "" {
+		if _, err := h.DB.ExecContext(ctx, query, args...); err != nil {
+			log.Println("Update issue failed:", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "failed to update issue",
+			})
+		}
+	}
+
+	ws.BroadcastToRoom("issue", req.ID, "issue_updated", req)
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "Assignee added successfully",
+		"message": "issue updated successfully",
 	})
 }
 
-func (h *IssueHandler) RemoveAssigneeFromIssue(c *fiber.Ctx) error {
-	var assigneeReq models.AssigneeRequest
-	if err := c.BodyParser(&assigneeReq); err != nil {
+func (h *IssueHandler) DeleteIssue(c *fiber.Ctx) error {
+	issue_id := c.Params("id")
+	if issue_id == "" || issue_id == "undefined" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
+			"error": "missing issue ID",
 		})
 	}
 
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Unauthorized",
-		})
-	}
+	userID := c.Locals("userID").(string)
 
-	if err := h.Repo.RemoveAssigneeFromIssue(c.Context(), db.RemoveAssigneeFromIssueParams{
-		IssueID: assigneeReq.IssueID,
-		UserID:  assigneeReq.UserID,
-	}); err != nil {
-		log.Printf("Failed to remove assignee from issue: %v", err)
+	ctx := c.Context()
+
+	issue, err := h.Repo.GetIssueByID(ctx, issue_id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "issue not found",
+			})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to remove assignee from issue",
+			"error": "failed to fetch issue",
+		})
+	}
+
+	isOwner := issue.OwnerID == userID
+	isTeamMember, err := h.TeamRepo.IsMemberInTeam(ctx, issue.TeamID, userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to check team membership",
+		})
+	}
+
+	if !isOwner && !isTeamMember {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "you are not authorized to delete this issue",
+		})
+	}
+
+	if err := h.Repo.DeleteIssue(ctx, issue_id); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to delete issue",
 		})
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "Assignee removed successfully",
+		"message": "issue deleted successfully",
 	})
 }
 
 func (h *IssueHandler) GetIssuesByUserID(c *fiber.Ctx) error {
-	userID := c.Params("id")
-	if userID == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "User ID is required",
-		})
-	}
+	userID := c.Locals("userID").(string)
+
 	issues, err := h.Repo.GetIssueByUserID(c.Context(), userID)
 	if err != nil {
 		log.Printf("Failed to get issues by user ID: %v", err)
@@ -207,45 +298,7 @@ func (h *IssueHandler) GetIssuesByUserID(c *fiber.Ctx) error {
 			"error": "Failed to get issues",
 		})
 	}
-	return c.Status(fiber.StatusOK).JSON(issues)
-}
-
-func (h *IssueHandler) DeleteIssue(c *fiber.Ctx) error {
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Unauthorized",
-		})
-	}
-
-	issueID := c.Params("id")
-	if issueID == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Issue ID is required",
-		})
-	}
-
-	issue, err := h.Repo.GetIssueByID(c.Context(), issueID)
-	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "Issue not found",
-		})
-	}
-
-	if issue.OwnerID != userID {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "You don't have permission to delete this issue",
-		})
-	}
-
-	if err := h.Repo.DeleteIssue(c.Context(), issueID); err != nil {
-		log.Printf("Failed to delete issue: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to delete issue",
-		})
-	}
-
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "Issue deleted successfully",
+		"issues": issues,
 	})
 }
