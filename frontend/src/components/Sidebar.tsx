@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import CreateWorkspacePopup from "./popup/CreateWorkspacePopup";
 import CreateTeamPopup from "./popup/CreateTeamPopup";
 import ChangeWorkspacePopup from "./popup/ChangeWorkspacePopup";
+import RenameWorkspacePopup from "./popup/RenameWorkspacePopup";
 
 export default function Sidebar(team: string) {
   const currentWorkspace = "Workspace 1";
@@ -67,6 +68,12 @@ export default function Sidebar(team: string) {
       />
       <CreateTeamPopup
         open={popupNumber === 3}
+        onClose={() => setPopupNumber(0)}
+        onSubmit={handlePopupSubmit}
+      />
+      <RenameWorkspacePopup
+        open={popupNumber === 4}
+        oldName={currentWorkspace}
         onClose={() => setPopupNumber(0)}
         onSubmit={handlePopupSubmit}
       />
