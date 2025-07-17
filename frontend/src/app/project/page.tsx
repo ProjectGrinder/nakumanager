@@ -1,10 +1,12 @@
-import ProjectInfo from "@/components/ProjectInfo";
-import WorkspaceBar from "@/components/WorkspaceBar";
+"use client";
+
+import ProjectInfo from "@/components/project/ProjectInfo";
+import Sidebar from "@/components/Sidebar";
 
 export default function ProjectPage() {
   return (
     <div className="flex flex-row">
-      <WorkspaceBar />;
+      {Sidebar("Team 1")}
       <ProjectInfo />
     </div>
   );

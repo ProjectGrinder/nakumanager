@@ -1,10 +1,12 @@
-import WorkspaceBar from "@/components/WorkspaceBar";
-import ViewList from "@/components/ViewList";
+"use client";
+
+import Sidebar from "@/components/Sidebar";
+import ViewList from "@/components/view/ViewList";
 
 export default function ViewListPage() {
   return (
     <div className="flex flex-row">
-      <WorkspaceBar />;
+      {Sidebar("Team 1")}
       <ViewList />
     </div>
   );

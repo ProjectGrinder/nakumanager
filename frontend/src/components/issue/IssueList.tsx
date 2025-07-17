@@ -1,8 +1,8 @@
 "use client";
 
-import SelectableItem from "./SelectableItem";
+import IssueSelectItem from "./IssueSelectItem";
 
-export default function ViewInfo() {
+export default function IssueList() {
   const issue_list = [
     [
       "Issue 1",
@@ -11,7 +11,7 @@ export default function ViewInfo() {
       "Alice",
       "2024-01-01",
       "2024-06-01",
-      "Issue 1",
+      "issue",
     ],
     [
       "Frontend",
@@ -20,21 +20,21 @@ export default function ViewInfo() {
       "Bob",
       "2024-02-01",
       "2024-07-01",
-      "Issue 2",
+      "issue",
     ],
   ];
   return (
-    <div className="flex flex-col p-10 text-white w-9/10">
-      <div className="flex-row text-2xl font-bold mb-8">
-        <span>View 1</span>
-        <i className="fa-solid fa-gear text-2xl ml-10"></i>
-      </div>
-      <div className="text-xl font-normal mb-6">
-        <span>Creator: Alice Wonder</span>
+    <div className="flex flex-col p-6 text-white w-4/5">
+      <div className="flex flex-row items-center mb-4 gap-6">
+        <span className="text-lg font-bold">All Issues</span>
+        <button className="px-3 py-2 bg-blue-500 text-xs text-white rounded-md hover:bg-blue-700">
+          <i className="fa-solid fa-plus text-[0.5rem] mr-2"></i>
+          Create issue
+        </button>
       </div>
       <div className="h-150 overflow-y-auto">
         {issue_list.map((issue, index) => (
-          <SelectableItem
+          <IssueSelectItem
             name={issue[0]}
             status={issue[1]}
             priority={issue[2]}

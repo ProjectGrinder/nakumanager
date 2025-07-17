@@ -1,10 +1,12 @@
-import IssueInfo from "@/components/IssueInfo";
-import WorkspaceBar from "@/components/WorkspaceBar";
+"use client";
+
+import IssueInfo from "@/components/issue/IssueInfo";
+import Sidebar from "@/components/Sidebar";
 
 export default function IssuePage() {
   return (
     <div className="flex flex-row">
-      <WorkspaceBar />;
+      {Sidebar("Team 1")}
       <IssueInfo />
     </div>
   );
