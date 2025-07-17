@@ -4,8 +4,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import CustomAvatar from "./Avatar";
 
-export default function WorkspaceInfo() {
+export default function TeamInfo() {
   const owner = "John Doe";
+  const [teamName, setTeamName] = useState("Team 1");
   const members = [
     ["John Doe", "Manager"],
     ["Member 1", "Data Scientist"],
@@ -17,7 +18,24 @@ export default function WorkspaceInfo() {
   const router = useRouter();
   return (
     <div className="flex flex-col items-start p-6">
-      <span className="text-xl text-white font-bold mb-4">Team Members</span>
+      <div className="flex-row text-white text-xl font-bold mb-4">
+        <textarea
+          className="resize-none overflow-hidden bg-transparent p-0 leading-snug focus:outline-none"
+          rows={1}
+          value={teamName}
+          onChange={(e) => setTeamName(e.target.value)}
+          onInput={(e) => {
+            const textarea = e.currentTarget;
+            textarea.style.height = "auto";
+            textarea.style.width = "auto";
+            textarea.style.height = textarea.scrollHeight + "px";
+            textarea.style.width = textarea.scrollWidth + "px";
+          }}
+          spellCheck={false}
+          autoCorrect="off"
+          autoCapitalize="off"
+        ></textarea>
+      </div>
       <button className="px-4 py-2 bg-blue-500 text-sm text-white rounded-md hover:bg-blue-700">
         <i className="fa-solid fa-plus text-xs mr-2"></i>
         Add members
