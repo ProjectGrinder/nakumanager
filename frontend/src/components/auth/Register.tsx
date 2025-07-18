@@ -1,17 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 export default function Register() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
 
   const [message, setMessage] = useState("");
+  const router = useRouter();
 
-  const handleRegister = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
+  const handleRegister = async () => {
     if (username == "" || password == "" || email == "") {
       alert("Please fill in every field");
       return;
@@ -32,11 +32,12 @@ export default function Register() {
 
       const data = await res.json();
       setMessage(data.message);
+      router.push("/");
     } catch (err) {
       console.error(err);
       setMessage("Registration failed");
     }
-    alert(message);
+    console.log(message);
   };
 
   return (
@@ -85,13 +86,13 @@ export default function Register() {
 
           <button
             id="btn-check"
-            onClick={(e) => handleRegister}
+            onClick={handleRegister}
             className="mt-6 border-box px-10 py-4 bg-blue-500 text-lg text-white rounded-xl hover:bg-blue-700"
           >
             Confirm
           </button>
         </div>
-        <p className="text-color-100 font-normal text-sm">
+        <p className="text-gray-100 font-normal text-sm">
           Back to
           <Link href="/" className="ml-2 underline">
             Log in

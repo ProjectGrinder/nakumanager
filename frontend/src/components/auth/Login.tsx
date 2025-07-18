@@ -78,7 +78,7 @@ export default function Login() {
             Confirm
           </button>
         </div>
-        <p className="text-color-100 font-normal text-sm">
+        <p className="text-gray-100 font-normal text-sm">
           Not registered yet?
           <Link href="/register" className="ml-2 underline">
             Register here
