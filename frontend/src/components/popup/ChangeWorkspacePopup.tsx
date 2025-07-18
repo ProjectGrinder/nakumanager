@@ -8,13 +8,14 @@ interface PopupProps {
   onSubmit: (value: string) => void;
 }
 
-export default function ChangeWorkspacePopup(props: PopupProps) {
-  const workspaces = [
-    "Workspace 1",
-    "Workspace 2",
-    "Workspace 3",
-    "Workspace 555555",
-  ];
+export default async function ChangeWorkspacePopup(props: PopupProps) {
+  const workspaces = await fetch("http://localhost:8080/api/workspace", {
+    method: "GET",
+  })
+    .then((res) => res.json())
+    .catch((err) => {
+      console.error("Failed to fetch workspaces:", err);
+    });
   const [workspace, setWorkspace] = useState(props.current);
   const style = {
     width: "auto",
@@ -84,7 +85,7 @@ export default function ChangeWorkspacePopup(props: PopupProps) {
             onChange={(e) => setWorkspace(e.target.value)}
             MenuProps={menuStyle}
           >
-            {workspaces.map((ws) => (
+            {workspaces.map((ws: string) => (
               <MenuItem value={ws}>{ws}</MenuItem>
             ))}
           </Select>
