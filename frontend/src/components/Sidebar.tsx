@@ -11,6 +11,7 @@ import DeleteWorkspacePopup from "./popup/DeleteWorkspacePopup";
 
 export default async function Sidebar(team: string) {
   const currentWorkspace = "Workspace 1";
+  const owner = "John Doe";
   const teams = await fetch("http://localhost:8080/api/teams", {
     method: "GET",
   })
@@ -43,6 +44,12 @@ export default async function Sidebar(team: string) {
   }, [showSidePopup]);
   const handleLogout = () => {
     router.push("/login");
+  };
+  const checkUser = (num: number) => {
+    const user = localStorage.getItem("user");
+    if (user !== owner) {
+      alert("You do not have permission for this action.");
+    } else setPopupNumber(num);
   };
   const selectTeam = (currentTeam: string) => {
     setSelectedTeam(currentTeam);
@@ -177,7 +184,7 @@ export default async function Sidebar(team: string) {
               <div
                 className="cursor-pointer hover:bg-gray-600 px-3 py-2 rounded transition duration-200"
                 onClick={() => {
-                  setPopupNumber(4);
+                  checkUser(4);
                   setShowSidePopup(false);
                 }}
               >
@@ -186,7 +193,7 @@ export default async function Sidebar(team: string) {
               <div
                 className="cursor-pointer hover:bg-gray-600 px-3 py-2 rounded transition duration-200"
                 onClick={() => {
-                  setPopupNumber(5);
+                  checkUser(5);
                   setShowSidePopup(false);
                 }}
               >

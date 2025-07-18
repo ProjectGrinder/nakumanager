@@ -28,7 +28,7 @@ export default function TeamInfo() {
           className="resize-none overflow-hidden bg-transparent p-0 leading-snug focus:outline-none"
           rows={1}
           value={teamName}
-          onChange={(e) => setTeamName(e.target.value)}
+          onChange={canEdit ? (e) => setTeamName(e.target.value) : undefined}
           onInput={(e) => {
             const textarea = e.currentTarget;
             textarea.style.height = "auto";
@@ -41,7 +41,10 @@ export default function TeamInfo() {
           autoCapitalize="off"
         ></textarea>
       </div>
-      <button className="px-4 py-2 bg-blue-500 text-sm text-white rounded-md hover:bg-blue-700">
+      <button
+        className="px-4 py-2 bg-blue-500 text-sm text-white rounded-md hover:bg-blue-700"
+        disabled={!canEdit}
+      >
         <i className="fa-solid fa-plus text-xs mr-2"></i>
         Add members
       </button>
@@ -70,9 +73,11 @@ export default function TeamInfo() {
                 <td>{member[1]}</td>
                 <td className="rounded-r-md h-full align-middle">
                   <div className="flex justify-center items-center h-full">
-                    <div className="flex justify-center items-center h-6 w-6 rounded-xl cursor-pointer hover:bg-gray-700 transition duration-200">
-                      <i className="fa-solid fa-xmark text-gray-500 text-base"></i>
-                    </div>
+                    {canEdit && (
+                      <div className="flex justify-center items-center h-6 w-6 rounded-xl cursor-pointer hover:bg-gray-700 transition duration-200">
+                        <i className="fa-solid fa-xmark text-gray-500 text-base"></i>
+                      </div>
+                    )}
                   </div>
                 </td>
               </tr>
