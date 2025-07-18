@@ -9,20 +9,15 @@ import ChangeWorkspacePopup from "./popup/ChangeWorkspacePopup";
 import RenameWorkspacePopup from "./popup/RenameWorkspacePopup";
 import DeleteWorkspacePopup from "./popup/DeleteWorkspacePopup";
 
-export default function Sidebar(team: string) {
+export default async function Sidebar(team: string) {
   const currentWorkspace = "Workspace 1";
-  const teams = [
-    "Team 1",
-    "Team 2",
-    "Team 3",
-    "Team 4",
-    "Team 5",
-    "Team 6",
-    "Team 7",
-    "Team 8",
-    "Team 9",
-    "Team 10",
-  ];
+  const teams = await fetch("http://localhost:8080/api/teams", {
+    method: "GET",
+  })
+    .then((res) => res.json())
+    .catch((err) => {
+      console.error("Failed to fetch teams:", err);
+    });
   const [selectedTeam, setSelectedTeam] = useState(team);
   const [popupNumber, setPopupNumber] = useState(0);
   const router = useRouter();
@@ -215,19 +210,19 @@ export default function Sidebar(team: string) {
           <i className="fa-solid fa-plus text-xs mr-2"></i>
           Create Team
         </SidebarButton>
-        {teams.map((team, index) => (
+        {teams.map((team: string[], index: number) => (
           <div key={index}>
             <SidebarButton
-              onClick={() => selectTeam(team)}
+              onClick={() => selectTeam(team[1])}
               className={
-                selectedTeam === team
+                selectedTeam === team[1]
                   ? "bg-gray-700 text-white font-semibold"
                   : ""
               }
             >
               {team}
             </SidebarButton>
-            {selectedTeam === team && (
+            {selectedTeam === team[1] && (
               <div className="ml-4">
                 <SidebarButton
                   onClick={() => router.push("/project-list")}
