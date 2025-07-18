@@ -56,7 +56,30 @@ export default function Sidebar(team: string) {
   const handlePopupSubmit = (value: string) => {
     console.log(value);
   };
-  const handleRenameWorkspace = async (newName: string) => {
+  const handleCreateWorkspace = async (name: string) => {
+    try {
+      const res = await fetch("http://localhost:8080/api/workspace", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name }),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`API error: ${res.status} - ${errorText}`);
+      }
+
+      const data = await res.json();
+      setMessage(data.message);
+      alert(message);
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+  const handleRenameWorkspace = async (name: string) => {
     const workspaceID = "workspace-id"; // Replace with actual workspace ID
     try {
       const res = await fetch("http://localhost:8080/api/workspace", {
@@ -64,7 +87,7 @@ export default function Sidebar(team: string) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ newName }),
+        body: JSON.stringify({ name }),
       });
 
       if (!res.ok) {
@@ -116,7 +139,7 @@ export default function Sidebar(team: string) {
       <CreateWorkspacePopup
         open={popupNumber === 1}
         onClose={() => setPopupNumber(0)}
-        onSubmit={handlePopupSubmit}
+        onSubmit={handleCreateWorkspace}
       />
       <ChangeWorkspacePopup
         open={popupNumber === 2}
