@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { FormControl, Select, MenuItem } from "@mui/material";
 import CustomAvatar from "../Avatar";
 import CustomDatePicker from "../CustomDatePicker";
 
 export default function ProjectInfo() {
+  const currentUser = "Alice";
   const project = {
     name: "AI Voicebot",
     status: "In Progress",
@@ -14,12 +15,15 @@ export default function ProjectInfo() {
     startDate: new Date("2024-01-01"),
     endDate: new Date("2024-06-01"),
     label: "AI",
+    creator: "Alice",
     members: [
       ["Member 1", "Frontend"],
       ["Member 2", "Frontend"],
       ["Member 3", "Backend"],
     ],
   };
+  const canEdit =
+    currentUser === project.creator || currentUser === project.leader;
   const [name, setName] = useState(project.name);
   const [leader, setLeader] = useState(project.leader);
   const [status, setStatus] = useState(project.status);
@@ -106,7 +110,7 @@ export default function ProjectInfo() {
           className="resize-none overflow-hidden bg-transparent p-0 leading-snug focus:outline-none"
           rows={1}
           value={name}
-          onChange={nameChange}
+          onChange={canEdit ? nameChange : undefined}
           onInput={(e) => {
             const textarea = e.currentTarget;
             textarea.style.height = "auto";
@@ -129,7 +133,7 @@ export default function ProjectInfo() {
               value={leader}
               label="Leader"
               IconComponent={() => null}
-              onChange={(e) => setLeader(e.target.value)}
+              onChange={canEdit ? (e) => setLeader(e.target.value) : undefined}
               MenuProps={menuStyle}
             >
               <MenuItem value={"Not Assigned"}>Not Assigned</MenuItem>
@@ -148,7 +152,7 @@ export default function ProjectInfo() {
               value={status}
               label="Status"
               IconComponent={() => null}
-              onChange={(e) => setStatus(e.target.value)}
+              onChange={canEdit ? (e) => setStatus(e.target.value) : undefined}
               MenuProps={menuStyle}
             >
               <MenuItem value={"Backlog"}>
@@ -180,7 +184,9 @@ export default function ProjectInfo() {
               value={priority}
               label="Priority"
               IconComponent={() => null}
-              onChange={(e) => setPriority(e.target.value)}
+              onChange={
+                canEdit ? (e) => setPriority(e.target.value) : undefined
+              }
               MenuProps={menuStyle}
             >
               <MenuItem value={"No Priority"}>
@@ -206,9 +212,15 @@ export default function ProjectInfo() {
             </Select>
           </FormControl>
           <div>
-            <CustomDatePicker value={startDate} onChange={setStartDate} />
+            <CustomDatePicker
+              value={startDate}
+              onChange={canEdit ? setStartDate : () => {}}
+            />
             <span className="mx-2 text-base text-gray-200">to</span>
-            <CustomDatePicker value={endDate} onChange={setEndDate} />
+            <CustomDatePicker
+              value={endDate}
+              onChange={canEdit ? setEndDate : () => {}}
+            />
           </div>
         </div>
         <div className="flex flex-row gap-2 items-center">
@@ -217,7 +229,7 @@ export default function ProjectInfo() {
             className="bg-gray-700 text-gray-200 p-2 text-sm rounded-lg w-40 h-8 outline-none"
             type="text"
             value={label}
-            onChange={(e) => setLabel(e.target.value)}
+            onChange={canEdit ? (e) => setLabel(e.target.value) : undefined}
             placeholder="None"
           />
         </div>
@@ -242,7 +254,10 @@ export default function ProjectInfo() {
         <span className="text-lg font-semibold text-gray-200 mb-4">
           Team Members
         </span>
-        <button className="px-4 py-2 bg-blue-500 text-sm text-white rounded-md hover:bg-blue-700">
+        <button
+          className="px-4 py-2 bg-blue-500 text-sm text-white rounded-md hover:bg-blue-700"
+          disabled={!canEdit}
+        >
           <i className="fa-solid fa-plus text-xs mr-2"></i>
           Add members
         </button>
