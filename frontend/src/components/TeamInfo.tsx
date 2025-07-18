@@ -5,16 +5,21 @@ import { useState } from "react";
 import CustomAvatar from "./Avatar";
 
 export default function TeamInfo() {
-  const owner = "John Doe";
-  const [teamName, setTeamName] = useState("Team 1");
-  const members = [
-    ["John Doe", "Manager"],
-    ["Member 1", "Data Scientist"],
-    ["Member 2", "Designer"],
-    ["KLMNOP", "Frontend"],
-    ["44P", "Backend"],
-    ["jane4321", "Tester"],
-  ];
+  const currentUser = "John Doe";
+  const team = {
+    name: "Team 1",
+    creator: "John Doe",
+    members: [
+      ["John Doe", "Manager"],
+      ["Member 1", "Data Scientist"],
+      ["Member 2", "Designer"],
+      ["KLMNOP", "Frontend"],
+      ["44P", "Backend"],
+      ["jane4321", "Tester"],
+    ],
+  };
+  const [teamName, setTeamName] = useState(team.name);
+  const canEdit = currentUser === team.creator;
   const router = useRouter();
   return (
     <div className="flex flex-col items-start p-6">
@@ -51,7 +56,7 @@ export default function TeamInfo() {
             </tr>
           </thead>
           <tbody>
-            {members.map((member, idx) => (
+            {team.members.map((member, idx) => (
               <tr
                 key={idx}
                 className="h-12 text-sm hover:bg-gray-800 text-gray-400 transition-colors"
