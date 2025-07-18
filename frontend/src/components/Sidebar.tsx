@@ -29,6 +29,7 @@ export default function Sidebar(team: string) {
   const [showSidePopup, setShowSidePopup] = useState(false);
   const moreBtnRef = useRef<HTMLSpanElement>(null);
   const sidePopupRef = useRef<HTMLDivElement>(null);
+  const [message, setMessage] = useState("");
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -55,6 +56,51 @@ export default function Sidebar(team: string) {
   const handlePopupSubmit = (value: string) => {
     console.log(value);
   };
+  const handleRenameWorkspace = async (newName: string) => {
+    const workspaceID = "workspace-id"; // Replace with actual workspace ID
+    try {
+      const res = await fetch("http://localhost:8080/api/workspace/", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ newName }),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`API error: ${res.status} - ${errorText}`);
+      }
+
+      const data = await res.json();
+      setMessage(data.message);
+      alert(message);
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+  const handleDeleteWorkspace = async () => {
+    const workspaceID = "workspace-id"; // Replace with actual workspace ID
+    try {
+      const res = await fetch("http://localhost:8080/api/workspace/", {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`API error: ${res.status} - ${errorText}`);
+      }
+
+      const data = await res.json();
+      setMessage(data.message);
+      alert(message);
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <div className="flex-column items-center justify-between p-2 border-r-1 border-gray-500 bg-gray-800 text-gray-200 w-60 h-screen relative z-100">
       <div className="flex items-center justify-between py-2 mb-2">
@@ -87,13 +133,13 @@ export default function Sidebar(team: string) {
         open={popupNumber === 4}
         oldName={currentWorkspace}
         onClose={() => setPopupNumber(0)}
-        onSubmit={handlePopupSubmit}
+        onSubmit={handleRenameWorkspace}
       />
       <DeleteWorkspacePopup
         open={popupNumber === 5}
         name={currentWorkspace}
         onClose={() => setPopupNumber(0)}
-        onSubmit={handlePopupSubmit}
+        onSubmit={handleDeleteWorkspace}
       />
       <div>
         <div className="flex flex-row items-center justify-between p-1 mb-2 text-gray-400 text-sm">
