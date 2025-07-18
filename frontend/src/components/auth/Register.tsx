@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { users } from "../../Database";
 import { FormEvent, useState } from "react";
 export default function Register() {
   const [username, setUsername] = useState("");
@@ -15,27 +14,6 @@ export default function Register() {
 
     if (username == "" || password == "" || email == "") {
       alert("Please fill in every field");
-      return;
-    }
-    const user = users.find((user) => user[0] === username);
-    if (user) {
-      alert("Username already taken");
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      alert("Please enter a valid email address");
-      return;
-    }
-    const oldEmail = users.find((oldEmail) => oldEmail[1] === email);
-    if (oldEmail) {
-      alert("Email already registered");
-      return;
-    }
-
-    if (password.length < 8) {
-      alert("Password must be at least 8 characters");
       return;
     }
     try {
@@ -58,7 +36,7 @@ export default function Register() {
       console.error(err);
       setMessage("Registration failed");
     }
-    console.log("Registration complete!");
+    alert(message);
   };
 
   return (

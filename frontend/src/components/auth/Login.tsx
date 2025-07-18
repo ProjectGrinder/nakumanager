@@ -1,21 +1,40 @@
 "use client";
 
 import Link from "next/link";
-import { users } from "../../Database";
 import { useState } from "react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleLogin = () => {
+  const [message, setMessage] = useState("");
+
+  const handleLogin = async () => {
     if (email == "" || password == "") {
       alert("Please fill in every field");
       return;
     }
-    const user = users.find((user) => user[0] === email);
-    if (user) console.log("Login Successful");
-    else alert("Email or password is incorrect");
+    try {
+      const res = await fetch("http://localhost:8080/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`API error: ${res.status} - ${errorText}`);
+      }
+
+      const data = await res.json();
+      setMessage(data.message);
+    } catch (err) {
+      console.error(err);
+      setMessage("Login failed");
+    }
+    alert(message);
   };
 
   return (
