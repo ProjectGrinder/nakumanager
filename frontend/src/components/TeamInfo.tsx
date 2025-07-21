@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import CustomAvatar from "./Avatar";
+import DeletePopup from "./popup/DeletePopup";
 
 export default function TeamInfo() {
   const currentUser = "John Doe";
@@ -18,17 +19,41 @@ export default function TeamInfo() {
       ["jane4321", "Tester"],
     ],
   };
-  const [teamName, setTeamName] = useState(team.name);
+  const [name, setName] = useState(team.name);
   const canEdit = currentUser === team.creator;
   const router = useRouter();
+  const handleupdate = async () => {
+    const response = await fetch("http://localhost:8080/api/issues/:id", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name,
+      }),
+    });
+    if (!response.ok) {
+      console.error("Failed to update project");
+    }
+  };
+  const [del, setDel] = useState(false);
+  const handleDelete = async () => {
+    const response = await fetch("http://localhost:8080/api/issues/:id", {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      console.error("Failed to delete project");
+    }
+  };
+
   return (
     <div className="flex flex-col items-start p-6">
       <div className="flex-row text-white text-xl font-bold mb-4">
         <textarea
           className="resize-none overflow-hidden bg-transparent p-0 leading-snug focus:outline-none"
           rows={1}
-          value={teamName}
-          onChange={canEdit ? (e) => setTeamName(e.target.value) : undefined}
+          value={name}
+          onChange={canEdit ? (e) => setName(e.target.value) : undefined}
           onInput={(e) => {
             const textarea = e.currentTarget;
             textarea.style.height = "auto";
@@ -40,7 +65,29 @@ export default function TeamInfo() {
           autoCorrect="off"
           autoCapitalize="off"
         ></textarea>
+        {canEdit && (
+          <div className="flex flex-row gap-6">
+            <button
+              className="px-6 py-2 bg-blue-500 text-sm text-white font-base rounded-md hover:bg-blue-700"
+              onClick={handleupdate}
+            >
+              Save
+            </button>
+            <button
+              className="px-6 py-2 bg-red-500 text-sm text-white font-base rounded-md hover:bg-red-700"
+              onClick={() => setDel(true)}
+            >
+              Delete
+            </button>
+          </div>
+        )}
       </div>
+      <DeletePopup
+        name={team.name}
+        open={del}
+        onClose={() => setDel(false)}
+        onSubmit={handleDelete}
+      ></DeletePopup>
       <button
         className="px-4 py-2 bg-blue-500 text-sm text-white rounded-md hover:bg-blue-700"
         disabled={!canEdit}
