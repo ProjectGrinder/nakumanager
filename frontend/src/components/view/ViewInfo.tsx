@@ -100,16 +100,14 @@ export default function ViewInfo() {
     <div className="flex flex-col items-start p-6 w-4/5">
       <div className="flex-row text-white text-xl font-bold mb-4">
         <textarea
-          className="min-w-[30rem] resize-none overflow-hidden bg-transparent p-0 leading-snug focus:outline-none"
+          className="min-w-[3rem] whitespace-nowrap resize-none overflow-hidden bg-transparent p-0 leading-snug focus:outline-none"
           rows={1}
           value={name}
           onChange={nameChange}
           onInput={(e) => {
             const textarea = e.currentTarget;
             textarea.style.height = "auto";
-            textarea.style.width = "auto";
-            textarea.style.height = textarea.scrollHeight + "px";
-            textarea.style.width = textarea.scrollWidth + "px";
+            textarea.style.width = "30rem";
           }}
           spellCheck={false}
           autoCorrect="off"
