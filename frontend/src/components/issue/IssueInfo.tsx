@@ -99,7 +99,7 @@ export default function IssueInfo() {
       }),
     });
     if (!response.ok) {
-      console.error("Failed to update view");
+      console.error("Failed to update issue");
     }
   };
   const [del, setDel] = useState(false);
@@ -108,7 +108,7 @@ export default function IssueInfo() {
       method: "DELETE",
     });
     if (!response.ok) {
-      console.error("Failed to delete view");
+      console.error("Failed to delete issue");
     }
   };
 

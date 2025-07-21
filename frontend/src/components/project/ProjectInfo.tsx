@@ -4,6 +4,7 @@ import { useState } from "react";
 import { FormControl, Select, MenuItem } from "@mui/material";
 import CustomAvatar from "../Avatar";
 import CustomDatePicker from "../CustomDatePicker";
+import DeletePopup from "../popup/DeletePopup";
 
 export default function ProjectInfo() {
   const currentUser = "Alice";
@@ -102,6 +103,35 @@ export default function ProjectInfo() {
     }
     setName(e.target.value);
   };
+  const handleupdate = async () => {
+    const response = await fetch("http://localhost:8080/api/issues/:id", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name,
+        leader,
+        status,
+        priority,
+        startDate,
+        endDate,
+        label,
+      }),
+    });
+    if (!response.ok) {
+      console.error("Failed to update project");
+    }
+  };
+  const [del, setDel] = useState(false);
+  const handleDelete = async () => {
+    const response = await fetch("http://localhost:8080/api/issues/:id", {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      console.error("Failed to delete project");
+    }
+  };
 
   return (
     <div className="flex flex-col items-start p-6">
@@ -122,7 +152,29 @@ export default function ProjectInfo() {
           autoCorrect="off"
           autoCapitalize="off"
         ></textarea>
+        {canEdit && (
+          <div className="flex flex-row gap-6">
+            <button
+              className="px-6 py-2 bg-blue-500 text-sm text-white font-base rounded-md hover:bg-blue-700"
+              onClick={handleupdate}
+            >
+              Save
+            </button>
+            <button
+              className="px-6 py-2 bg-red-500 text-sm text-white font-base rounded-md hover:bg-red-700"
+              onClick={() => setDel(true)}
+            >
+              Delete
+            </button>
+          </div>
+        )}
       </div>
+      <DeletePopup
+        name={project.name}
+        open={del}
+        onClose={() => setDel(false)}
+        onSubmit={handleDelete}
+      ></DeletePopup>
       <div className="flex flex-col font-normal">
         <div className="flex flex-row gap-2 items-center">
           <span className="text-base text-gray-400">Leader:</span>
@@ -214,12 +266,20 @@ export default function ProjectInfo() {
           <div>
             <CustomDatePicker
               value={startDate}
-              onChange={canEdit ? setStartDate : () => {}}
+              onChange={(date) => {
+                if (canEdit && date) {
+                  setStartDate(date);
+                }
+              }}
             />
             <span className="mx-2 text-base text-gray-200">to</span>
             <CustomDatePicker
               value={endDate}
-              onChange={canEdit ? setEndDate : () => {}}
+              onChange={(date) => {
+                if (canEdit && date) {
+                  setEndDate(date);
+                }
+              }}
             />
           </div>
         </div>
