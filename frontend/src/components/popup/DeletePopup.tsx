@@ -2,7 +2,7 @@ interface PopupProps {
   open: boolean;
   name: string;
   onClose: () => void;
-  onSubmit: () => void;
+  onSubmit: (value: string) => void;
 }
 
 export default function DeletePopup(props: PopupProps) {
@@ -27,7 +27,7 @@ export default function DeletePopup(props: PopupProps) {
         <div className="flex justify-end space-x-2 mt-4">
           <button
             onClick={() => {
-              props.onSubmit();
+              props.onSubmit(props.name);
               props.onClose();
             }}
             className="px-8 py-2 rounded-lg bg-red-500 text-white hover:bg-blue-700 text-sm"
