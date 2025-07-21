@@ -4,6 +4,7 @@ import { FormControl, Select, MenuItem } from "@mui/material";
 import CustomDatePicker from "../CustomDatePicker";
 import { useState } from "react";
 import IssueSelectItem from "../issue/IssueSelectItem";
+import DeletePopup from "../popup/DeletePopup";
 
 export default function ViewInfo() {
   const view = {
@@ -17,7 +18,7 @@ export default function ViewInfo() {
     label: "Not set",
     endDate: new Date("2024-06-01"),
   };
-  const currentUser = "Member 2";
+  const currentUser = "Member 1";
   const issue_list = [
     [
       "Issue 1",
@@ -98,6 +99,31 @@ export default function ViewInfo() {
     }
     setName(e.target.value);
   };
+  const handleupdate = async () => {
+    const groupBy = [status, priority, assignee, team, project, label, endDate];
+    const response = await fetch("http://localhost:8080/api/views/:id", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name,
+        groupBy,
+      }),
+    });
+    if (!response.ok) {
+      console.error("Failed to update view");
+    }
+  };
+  const [del, setDel] = useState(false);
+  const handleDelete = async () => {
+    const response = await fetch("http://localhost:8080/api/views/:id", {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      console.error("Failed to delete view");
+    }
+  };
   return (
     <div className="flex flex-col items-start p-6 w-4/5">
       <div className="flex flex-row justify-between w-full text-white mb-4">
@@ -117,15 +143,27 @@ export default function ViewInfo() {
         ></textarea>
         {canEdit && (
           <div className="flex flex-row gap-6">
-            <button className="px-6 py-2 bg-blue-500 text-sm text-white font-base rounded-md hover:bg-blue-700">
+            <button
+              className="px-6 py-2 bg-blue-500 text-sm text-white font-base rounded-md hover:bg-blue-700"
+              onClick={handleupdate}
+            >
               Save
             </button>
-            <button className="px-6 py-2 bg-red-500 text-sm text-white font-base rounded-md hover:bg-red-700">
+            <button
+              className="px-6 py-2 bg-red-500 text-sm text-white font-base rounded-md hover:bg-red-700"
+              onClick={() => setDel(true)}
+            >
               Delete
             </button>
           </div>
         )}
       </div>
+      <DeletePopup
+        name={view.name}
+        open={del}
+        onClose={() => setDel(false)}
+        onSubmit={handleDelete}
+      ></DeletePopup>
       <div className="flex flex-col font-normal">
         <div className="flex flex-row gap-2 items-center">
           <span className="text-base text-gray-400">
