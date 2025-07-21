@@ -2,27 +2,14 @@
 
 import IssueSelectItem from "./IssueSelectItem";
 
-export default function MyIssue() {
-  const issue_list = [
-    [
-      "Issue 1",
-      "In Progress",
-      "Urgent",
-      "Alice",
-      "2024-01-01",
-      "2024-06-01",
-      "issue",
-    ],
-    [
-      "Frontend",
-      "Completed",
-      "Low Priority",
-      "Bob",
-      "2024-02-01",
-      "2024-07-01",
-      "issue",
-    ],
-  ];
+export default async function MyIssue() {
+  const issue_list = await fetch("http://localhost:8080/api/issues", {
+    method: "GET",
+  })
+    .then((res) => res.json())
+    .catch((err) => {
+      console.error("Failed to fetch issues:", err);
+    });
   return (
     <div className="flex flex-col p-6 text-white w-4/5">
       <div className="flex flex-row items-center mb-4 gap-6">
@@ -33,7 +20,7 @@ export default function MyIssue() {
         </button>
       </div>
       <div className="h-150 overflow-y-auto">
-        {issue_list.map((issue, index) => (
+        {issue_list.map((issue: string[], index: number) => (
           <IssueSelectItem
             name={issue[0]}
             status={issue[1]}
