@@ -3,16 +3,20 @@
 import { useState } from "react";
 import { FormControl, Select, MenuItem } from "@mui/material";
 import CustomDatePicker from "../CustomDatePicker";
+import DeletePopup from "../popup/DeletePopup";
 
 export default function IssueInfo() {
+  const currentUser = "Member 1";
   const issue = {
     name: "Issue 1",
     description: "This is a test issue",
+    owner: "John Doe",
     status: "Planned",
     priority: "High Priority",
     project: "AI Voicebot",
     creator: "Member 1",
     assignee: "Member 2",
+    team: "Team 1",
     startDate: new Date("2024-01-01"),
     endDate: new Date("2024-06-01"),
     label: "Design",
@@ -69,12 +73,43 @@ export default function IssueInfo() {
       },
     },
   };
-
+  const canEdit = currentUser === issue.creator;
   const nameChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (e.target.value.length <= 0) {
       return;
     }
     setName(e.target.value);
+  };
+  const handleupdate = async () => {
+    const response = await fetch("http://localhost:8080/api/issues/:id", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name,
+        description,
+        priority,
+        status,
+        assignee,
+        project,
+        startDate,
+        endDate,
+        label,
+      }),
+    });
+    if (!response.ok) {
+      console.error("Failed to update view");
+    }
+  };
+  const [del, setDel] = useState(false);
+  const handleDelete = async () => {
+    const response = await fetch("http://localhost:8080/api/issues/:id", {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      console.error("Failed to delete view");
+    }
   };
 
   return (
@@ -96,7 +131,29 @@ export default function IssueInfo() {
           autoCorrect="off"
           autoCapitalize="off"
         ></textarea>
+        {canEdit && (
+          <div className="flex flex-row gap-6">
+            <button
+              className="px-6 py-2 bg-blue-500 text-sm text-white font-base rounded-md hover:bg-blue-700"
+              onClick={handleupdate}
+            >
+              Save
+            </button>
+            <button
+              className="px-6 py-2 bg-red-500 text-sm text-white font-base rounded-md hover:bg-red-700"
+              onClick={() => setDel(true)}
+            >
+              Delete
+            </button>
+          </div>
+        )}
       </div>
+      <DeletePopup
+        name={issue.name}
+        open={del}
+        onClose={() => setDel(false)}
+        onSubmit={handleDelete}
+      ></DeletePopup>
       <div className="flex flex-col font-normal">
         <div className="flex flex-row gap-2 items-center">
           <span className="text-base text-gray-400">
@@ -107,7 +164,7 @@ export default function IssueInfo() {
           className="w-150 bg-gray-700 text-gray-200 text-sm p-4 rounded-lg my-4 focus:outline-none"
           rows={5}
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={canEdit ? (e) => setDescription(e.target.value) : undefined}
           placeholder="No description..."
         ></textarea>
         <hr className="border-gray-500 mt-4 mb-4"></hr>
@@ -119,7 +176,7 @@ export default function IssueInfo() {
               value={status}
               label="Status"
               IconComponent={() => null}
-              onChange={(e) => setStatus(e.target.value)}
+              onChange={canEdit ? (e) => setStatus(e.target.value) : undefined}
               MenuProps={menuStyle}
             >
               <MenuItem value={"Backlog"}>
@@ -151,7 +208,9 @@ export default function IssueInfo() {
               value={priority}
               label="Priority"
               IconComponent={() => null}
-              onChange={(e) => setPriority(e.target.value)}
+              onChange={
+                canEdit ? (e) => setPriority(e.target.value) : undefined
+              }
               MenuProps={menuStyle}
             >
               <MenuItem value={"No Priority"}>
@@ -177,9 +236,23 @@ export default function IssueInfo() {
             </Select>
           </FormControl>
           <div>
-            <CustomDatePicker value={startDate} onChange={setStartDate} />
+            <CustomDatePicker
+              value={startDate}
+              onChange={(date) => {
+                if (canEdit && date) {
+                  setStartDate(date);
+                }
+              }}
+            />
             <span className="mx-2 text-base text-gray-200">to</span>
-            <CustomDatePicker value={endDate} onChange={setEndDate} />
+            <CustomDatePicker
+              value={endDate}
+              onChange={(date) => {
+                if (canEdit && date) {
+                  setEndDate(date);
+                }
+              }}
+            />
           </div>
         </div>
         <div className="flex flex-row gap-8 mb-4">
@@ -191,7 +264,9 @@ export default function IssueInfo() {
                 value={assignee}
                 label="Assignee"
                 IconComponent={() => null}
-                onChange={(e) => setAssignee(e.target.value)}
+                onChange={
+                  canEdit ? (e) => setAssignee(e.target.value) : undefined
+                }
                 MenuProps={menuStyle}
               >
                 <MenuItem value={"Not Assigned"}>
@@ -215,7 +290,9 @@ export default function IssueInfo() {
                 value={project}
                 label="Project"
                 IconComponent={() => null}
-                onChange={(e) => setProject(e.target.value)}
+                onChange={
+                  canEdit ? (e) => setProject(e.target.value) : undefined
+                }
                 MenuProps={menuStyle}
               >
                 <MenuItem value={"Not Assigned"}>
@@ -238,7 +315,7 @@ export default function IssueInfo() {
             className="bg-gray-700 text-gray-200 p-2 text-sm rounded-lg w-40 h-8 outline-none"
             type="text"
             value={label}
-            onChange={(e) => setLabel(e.target.value)}
+            onChange={canEdit ? (e) => setLabel(e.target.value) : undefined}
             placeholder="None"
           />
         </div>
