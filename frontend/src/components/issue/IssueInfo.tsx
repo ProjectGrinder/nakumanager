@@ -119,7 +119,7 @@ export default function IssueInfo() {
           className="min-w-[30rem] resize-none overflow-hidden bg-transparent p-0 leading-snug focus:outline-none"
           rows={1}
           value={name}
-          onChange={nameChange}
+          onChange={canEdit ? nameChange : undefined}
           onInput={(e) => {
             const textarea = e.currentTarget;
             textarea.style.height = "auto";
