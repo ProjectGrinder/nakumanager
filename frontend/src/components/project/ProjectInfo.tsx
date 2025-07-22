@@ -5,8 +5,10 @@ import { FormControl, Select, MenuItem } from "@mui/material";
 import CustomAvatar from "../Avatar";
 import CustomDatePicker from "../CustomDatePicker";
 import DeletePopup from "../popup/DeletePopup";
+import { useRouter } from "next/navigation";
+import AddProjectMemberPopup from "../popup/AddProjectMemberPopup";
 
-export default function ProjectInfo() {
+export default async function ProjectInfo() {
   const currentUser = "Alice";
   const project = {
     name: "AI Voicebot",
@@ -102,6 +104,37 @@ export default function ProjectInfo() {
       return;
     }
     setName(e.target.value);
+  };
+  const router = useRouter();
+  const [memberPopup, setMemberPopup] = useState(false);
+  const getTeamMembers = await fetch(
+    "http://localhost:8080/api/workspace/members",
+    {
+      method: "GET",
+    }
+  )
+    .then((res) => res.json())
+    .catch((err) => {
+      console.error("Failed to fetch teams:", err);
+    });
+  const handleAddMember = async () => {
+    const response = await fetch(
+      "http://localhost:8080/api/projects/:id/members",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+        }),
+      }
+    );
+    if (!response.ok) {
+      console.error("Failed to add member");
+    } else {
+      router.refresh();
+    }
   };
   const handleupdate = async () => {
     const response = await fetch("http://localhost:8080/api/issues/:id", {
@@ -317,10 +350,17 @@ export default function ProjectInfo() {
         <button
           className="px-4 py-2 bg-blue-500 text-sm text-white rounded-md hover:bg-blue-700"
           disabled={!canEdit}
+          onClick={() => setMemberPopup(true)}
         >
           <i className="fa-solid fa-plus text-xs mr-2"></i>
-          Add members
+          Add member
         </button>
+        <AddProjectMemberPopup
+          current={getTeamMembers}
+          open={memberPopup}
+          onClose={() => setMemberPopup(false)}
+          onSubmit={handleAddMember}
+        />
       </div>
       <div className="max-h-90 overflow-y-auto">
         <table className="w-200 text-left mt-4">
