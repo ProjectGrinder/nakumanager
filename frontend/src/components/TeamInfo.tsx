@@ -23,7 +23,7 @@ export default function TeamInfo() {
   const canEdit = currentUser === team.creator;
   const router = useRouter();
   const handleupdate = async () => {
-    const response = await fetch("http://localhost:8080/api/issues/:id", {
+    const response = await fetch("http://localhost:8080/api/teams/:id", {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -38,7 +38,7 @@ export default function TeamInfo() {
   };
   const [del, setDel] = useState(false);
   const handleDelete = async () => {
-    const response = await fetch("http://localhost:8080/api/issues/:id", {
+    const response = await fetch("http://localhost:8080/api/teams/:id", {
       method: "DELETE",
     });
     if (!response.ok) {

@@ -84,7 +84,7 @@ export default async function Sidebar(team: string) {
   const handleRenameWorkspace = async (name: string) => {
     const workspaceID = "workspace-id"; // Replace with actual workspace ID
     try {
-      const res = await fetch("http://localhost:8080/api/workspace", {
+      const res = await fetch("http://localhost:8080/api/workspace/:id", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -108,7 +108,7 @@ export default async function Sidebar(team: string) {
   const handleDeleteWorkspace = async () => {
     const workspaceID = "workspace-id"; // Replace with actual workspace ID
     try {
-      const res = await fetch("http://localhost:8080/api/workspace", {
+      const res = await fetch("http://localhost:8080/api/workspace/:id", {
         method: "DELETE",
       });
 
