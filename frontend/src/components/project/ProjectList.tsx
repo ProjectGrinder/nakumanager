@@ -2,27 +2,14 @@
 
 import ProjectSelectItem from "./ProjectSelectItem";
 
-export default function ProjectList() {
-  const project_list = [
-    [
-      "AI Voicebot",
-      "In Progress",
-      "High Priority",
-      "Alice",
-      "2024-01-01",
-      "2024-06-01",
-      "project",
-    ],
-    [
-      "Frontend",
-      "Planned",
-      "Medium Priority",
-      "Bob",
-      "2024-02-01",
-      "2024-07-01",
-      "project",
-    ],
-  ];
+export default async function ProjectList() {
+  const projects = await fetch("http://localhost:8080/api/projects", {
+    method: "GET",
+  })
+    .then((res) => res.json())
+    .catch((err) => {
+      console.error("Failed to fetch projects:", err);
+    });
   return (
     <div className="flex flex-col p-6 text-white w-4/5">
       <div className="flex flex-row items-center mb-4 gap-6">
@@ -33,7 +20,7 @@ export default function ProjectList() {
         </button>
       </div>
       <div className="h-150 overflow-y-auto">
-        {project_list.map((project, index) => (
+        {projects.map((project: string[], index: number) => (
           <ProjectSelectItem
             name={project[0]}
             status={project[1]}

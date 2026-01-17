@@ -5,6 +5,7 @@ import { useState } from "react";
 import CustomAvatar from "./Avatar";
 
 export default function WorkspaceInfo() {
+  const currentUser = "John Doe";
   const owner = ["John Doe", "johndoe@gmail.com"];
   const members = [
     ["Member 1", "member1@gmail.com", "Admin"],
@@ -15,6 +16,7 @@ export default function WorkspaceInfo() {
   ];
   const [copied, setCopied] = useState(false);
   const router = useRouter();
+  const canEdit = currentUser === owner[0];
   const copyInvite = async () => {
     try {
       await navigator.clipboard.writeText("Copy successful!");
@@ -30,6 +32,7 @@ export default function WorkspaceInfo() {
         Workspace Members
       </span>
       <button
+        disabled={!canEdit}
         onClick={copyInvite}
         className="px-4 py-2 bg-blue-500 text-sm text-white rounded-md hover:bg-blue-700"
       >
@@ -74,9 +77,11 @@ export default function WorkspaceInfo() {
                 <td>{member[2]}</td>
                 <td className="rounded-r-md h-full align-middle">
                   <div className="flex justify-center items-center h-full">
-                    <div className="flex justify-center items-center h-6 w-6 rounded-xl cursor-pointer hover:bg-gray-700 transition duration-200">
-                      <i className="fa-solid fa-xmark text-gray-500 text-base"></i>
-                    </div>
+                    {canEdit && (
+                      <div className="flex justify-center items-center h-6 w-6 rounded-xl cursor-pointer hover:bg-gray-700 transition duration-200">
+                        <i className="fa-solid fa-xmark text-gray-500 text-base"></i>
+                      </div>
+                    )}
                   </div>
                 </td>
               </tr>

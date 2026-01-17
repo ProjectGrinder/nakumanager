@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { FormControl, Select, MenuItem } from "@mui/material";
 import CustomAvatar from "../Avatar";
 import CustomDatePicker from "../CustomDatePicker";
+import DeletePopup from "../popup/DeletePopup";
+import { useRouter } from "next/navigation";
+import AddProjectMemberPopup from "../popup/AddProjectMemberPopup";
 
-export default function ProjectInfo() {
+export default async function ProjectInfo() {
+  const currentUser = "Alice";
   const project = {
     name: "AI Voicebot",
     status: "In Progress",
@@ -14,12 +18,15 @@ export default function ProjectInfo() {
     startDate: new Date("2024-01-01"),
     endDate: new Date("2024-06-01"),
     label: "AI",
+    creator: "Alice",
     members: [
       ["Member 1", "Frontend"],
       ["Member 2", "Frontend"],
       ["Member 3", "Backend"],
     ],
   };
+  const canEdit =
+    currentUser === project.creator || currentUser === project.leader;
   const [name, setName] = useState(project.name);
   const [leader, setLeader] = useState(project.leader);
   const [status, setStatus] = useState(project.status);
@@ -98,6 +105,66 @@ export default function ProjectInfo() {
     }
     setName(e.target.value);
   };
+  const router = useRouter();
+  const [memberPopup, setMemberPopup] = useState(false);
+  const getTeamMembers = await fetch(
+    "http://localhost:8080/api/workspace/members",
+    {
+      method: "GET",
+    }
+  )
+    .then((res) => res.json())
+    .catch((err) => {
+      console.error("Failed to fetch teams:", err);
+    });
+  const handleAddMember = async () => {
+    const response = await fetch(
+      "http://localhost:8080/api/projects/:id/members",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+        }),
+      }
+    );
+    if (!response.ok) {
+      console.error("Failed to add member");
+    } else {
+      router.refresh();
+    }
+  };
+  const handleupdate = async () => {
+    const response = await fetch("http://localhost:8080/api/issues/:id", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name,
+        leader,
+        status,
+        priority,
+        startDate,
+        endDate,
+        label,
+      }),
+    });
+    if (!response.ok) {
+      console.error("Failed to update project");
+    }
+  };
+  const [del, setDel] = useState(false);
+  const handleDelete = async () => {
+    const response = await fetch("http://localhost:8080/api/issues/:id", {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      console.error("Failed to delete project");
+    }
+  };
 
   return (
     <div className="flex flex-col items-start p-6">
@@ -106,7 +173,7 @@ export default function ProjectInfo() {
           className="resize-none overflow-hidden bg-transparent p-0 leading-snug focus:outline-none"
           rows={1}
           value={name}
-          onChange={nameChange}
+          onChange={canEdit ? nameChange : undefined}
           onInput={(e) => {
             const textarea = e.currentTarget;
             textarea.style.height = "auto";
@@ -118,7 +185,29 @@ export default function ProjectInfo() {
           autoCorrect="off"
           autoCapitalize="off"
         ></textarea>
+        {canEdit && (
+          <div className="flex flex-row gap-6">
+            <button
+              className="px-6 py-2 bg-blue-500 text-sm text-white font-base rounded-md hover:bg-blue-700"
+              onClick={handleupdate}
+            >
+              Save
+            </button>
+            <button
+              className="px-6 py-2 bg-red-500 text-sm text-white font-base rounded-md hover:bg-red-700"
+              onClick={() => setDel(true)}
+            >
+              Delete
+            </button>
+          </div>
+        )}
       </div>
+      <DeletePopup
+        name={project.name}
+        open={del}
+        onClose={() => setDel(false)}
+        onSubmit={handleDelete}
+      ></DeletePopup>
       <div className="flex flex-col font-normal">
         <div className="flex flex-row gap-2 items-center">
           <span className="text-base text-gray-400">Leader:</span>
@@ -129,7 +218,7 @@ export default function ProjectInfo() {
               value={leader}
               label="Leader"
               IconComponent={() => null}
-              onChange={(e) => setLeader(e.target.value)}
+              onChange={canEdit ? (e) => setLeader(e.target.value) : undefined}
               MenuProps={menuStyle}
             >
               <MenuItem value={"Not Assigned"}>Not Assigned</MenuItem>
@@ -148,7 +237,7 @@ export default function ProjectInfo() {
               value={status}
               label="Status"
               IconComponent={() => null}
-              onChange={(e) => setStatus(e.target.value)}
+              onChange={canEdit ? (e) => setStatus(e.target.value) : undefined}
               MenuProps={menuStyle}
             >
               <MenuItem value={"Backlog"}>
@@ -180,7 +269,9 @@ export default function ProjectInfo() {
               value={priority}
               label="Priority"
               IconComponent={() => null}
-              onChange={(e) => setPriority(e.target.value)}
+              onChange={
+                canEdit ? (e) => setPriority(e.target.value) : undefined
+              }
               MenuProps={menuStyle}
             >
               <MenuItem value={"No Priority"}>
@@ -206,9 +297,23 @@ export default function ProjectInfo() {
             </Select>
           </FormControl>
           <div>
-            <CustomDatePicker value={startDate} onChange={setStartDate} />
+            <CustomDatePicker
+              value={startDate}
+              onChange={(date) => {
+                if (canEdit && date) {
+                  setStartDate(date);
+                }
+              }}
+            />
             <span className="mx-2 text-base text-gray-200">to</span>
-            <CustomDatePicker value={endDate} onChange={setEndDate} />
+            <CustomDatePicker
+              value={endDate}
+              onChange={(date) => {
+                if (canEdit && date) {
+                  setEndDate(date);
+                }
+              }}
+            />
           </div>
         </div>
         <div className="flex flex-row gap-2 items-center">
@@ -217,7 +322,7 @@ export default function ProjectInfo() {
             className="bg-gray-700 text-gray-200 p-2 text-sm rounded-lg w-40 h-8 outline-none"
             type="text"
             value={label}
-            onChange={(e) => setLabel(e.target.value)}
+            onChange={canEdit ? (e) => setLabel(e.target.value) : undefined}
             placeholder="None"
           />
         </div>
@@ -242,10 +347,20 @@ export default function ProjectInfo() {
         <span className="text-lg font-semibold text-gray-200 mb-4">
           Team Members
         </span>
-        <button className="px-4 py-2 bg-blue-500 text-sm text-white rounded-md hover:bg-blue-700">
+        <button
+          className="px-4 py-2 bg-blue-500 text-sm text-white rounded-md hover:bg-blue-700"
+          disabled={!canEdit}
+          onClick={() => setMemberPopup(true)}
+        >
           <i className="fa-solid fa-plus text-xs mr-2"></i>
-          Add members
+          Add member
         </button>
+        <AddProjectMemberPopup
+          current={getTeamMembers}
+          open={memberPopup}
+          onClose={() => setMemberPopup(false)}
+          onSubmit={handleAddMember}
+        />
       </div>
       <div className="max-h-90 overflow-y-auto">
         <table className="w-200 text-left mt-4">

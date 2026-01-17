@@ -5,7 +5,7 @@ interface PopupProps {
   onSubmit: (value: string) => void;
 }
 
-export default function DeleteWorkspacePopup(props: PopupProps) {
+export default function DeletePopup(props: PopupProps) {
   if (!props.open) return null;
 
   return (
@@ -18,11 +18,8 @@ export default function DeleteWorkspacePopup(props: PopupProps) {
         >
           ×
         </button>
-        <span className="text-base text-gray-200 font-semibold mb-3">
-          Delete this workspace?
-        </span>
-        <span className="text-sm text-gray-300 mb-2">
-          Everything related to "{props.name}" will be deleted.
+        <span className="text-lg text-gray-200 font-semibold mb-3">
+          Are you sure?
         </span>
         <span className="text-sm text-gray-300 mb-2">
           This action cannot be undone.

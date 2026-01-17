@@ -9,26 +9,23 @@ import ChangeWorkspacePopup from "./popup/ChangeWorkspacePopup";
 import RenameWorkspacePopup from "./popup/RenameWorkspacePopup";
 import DeleteWorkspacePopup from "./popup/DeleteWorkspacePopup";
 
-export default function Sidebar(team: string) {
+export default async function Sidebar(team: string) {
   const currentWorkspace = "Workspace 1";
-  const teams = [
-    "Team 1",
-    "Team 2",
-    "Team 3",
-    "Team 4",
-    "Team 5",
-    "Team 6",
-    "Team 7",
-    "Team 8",
-    "Team 9",
-    "Team 10",
-  ];
+  const owner = "John Doe";
+  const teams = await fetch("http://localhost:8080/api/teams", {
+    method: "GET",
+  })
+    .then((res) => res.json())
+    .catch((err) => {
+      console.error("Failed to fetch teams:", err);
+    });
   const [selectedTeam, setSelectedTeam] = useState(team);
   const [popupNumber, setPopupNumber] = useState(0);
   const router = useRouter();
   const [showSidePopup, setShowSidePopup] = useState(false);
   const moreBtnRef = useRef<HTMLSpanElement>(null);
   const sidePopupRef = useRef<HTMLDivElement>(null);
+  const [message, setMessage] = useState("");
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -48,6 +45,12 @@ export default function Sidebar(team: string) {
   const handleLogout = () => {
     router.push("/login");
   };
+  const checkUser = (num: number) => {
+    const user = localStorage.getItem("user");
+    if (user !== owner) {
+      alert("You do not have permission for this action.");
+    } else setPopupNumber(num);
+  };
   const selectTeam = (currentTeam: string) => {
     setSelectedTeam(currentTeam);
     router.push("/team");
@@ -55,6 +58,74 @@ export default function Sidebar(team: string) {
   const handlePopupSubmit = (value: string) => {
     console.log(value);
   };
+  const handleCreateWorkspace = async (name: string) => {
+    try {
+      const res = await fetch("http://localhost:8080/api/workspace", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name }),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`API error: ${res.status} - ${errorText}`);
+      }
+
+      const data = await res.json();
+      setMessage(data.message);
+      alert(message);
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+  const handleRenameWorkspace = async (name: string) => {
+    const workspaceID = "workspace-id"; // Replace with actual workspace ID
+    try {
+      const res = await fetch("http://localhost:8080/api/workspace/:id", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name }),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`API error: ${res.status} - ${errorText}`);
+      }
+
+      const data = await res.json();
+      setMessage(data.message);
+      alert(message);
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+  const handleDeleteWorkspace = async () => {
+    const workspaceID = "workspace-id"; // Replace with actual workspace ID
+    try {
+      const res = await fetch("http://localhost:8080/api/workspace/:id", {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`API error: ${res.status} - ${errorText}`);
+      }
+
+      const data = await res.json();
+      setMessage(data.message);
+      alert(message);
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <div className="flex-column items-center justify-between p-2 border-r-1 border-gray-500 bg-gray-800 text-gray-200 w-60 h-screen relative z-100">
       <div className="flex items-center justify-between py-2 mb-2">
@@ -70,7 +141,7 @@ export default function Sidebar(team: string) {
       <CreateWorkspacePopup
         open={popupNumber === 1}
         onClose={() => setPopupNumber(0)}
-        onSubmit={handlePopupSubmit}
+        onSubmit={handleCreateWorkspace}
       />
       <ChangeWorkspacePopup
         open={popupNumber === 2}
@@ -87,13 +158,13 @@ export default function Sidebar(team: string) {
         open={popupNumber === 4}
         oldName={currentWorkspace}
         onClose={() => setPopupNumber(0)}
-        onSubmit={handlePopupSubmit}
+        onSubmit={handleRenameWorkspace}
       />
       <DeleteWorkspacePopup
         open={popupNumber === 5}
         name={currentWorkspace}
         onClose={() => setPopupNumber(0)}
-        onSubmit={handlePopupSubmit}
+        onSubmit={handleDeleteWorkspace}
       />
       <div>
         <div className="flex flex-row items-center justify-between p-1 mb-2 text-gray-400 text-sm">
@@ -113,7 +184,7 @@ export default function Sidebar(team: string) {
               <div
                 className="cursor-pointer hover:bg-gray-600 px-3 py-2 rounded transition duration-200"
                 onClick={() => {
-                  setPopupNumber(4);
+                  checkUser(4);
                   setShowSidePopup(false);
                 }}
               >
@@ -122,7 +193,7 @@ export default function Sidebar(team: string) {
               <div
                 className="cursor-pointer hover:bg-gray-600 px-3 py-2 rounded transition duration-200"
                 onClick={() => {
-                  setPopupNumber(5);
+                  checkUser(5);
                   setShowSidePopup(false);
                 }}
               >
@@ -146,19 +217,19 @@ export default function Sidebar(team: string) {
           <i className="fa-solid fa-plus text-xs mr-2"></i>
           Create Team
         </SidebarButton>
-        {teams.map((team, index) => (
+        {teams.map((team: string[], index: number) => (
           <div key={index}>
             <SidebarButton
-              onClick={() => selectTeam(team)}
+              onClick={() => selectTeam(team[1])}
               className={
-                selectedTeam === team
+                selectedTeam === team[1]
                   ? "bg-gray-700 text-white font-semibold"
                   : ""
               }
             >
               {team}
             </SidebarButton>
-            {selectedTeam === team && (
+            {selectedTeam === team[1] && (
               <div className="ml-4">
                 <SidebarButton
                   onClick={() => router.push("/project-list")}

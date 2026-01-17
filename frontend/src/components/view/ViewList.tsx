@@ -2,12 +2,14 @@
 
 import ViewSelectItem from "./ViewSelectItem";
 
-export default function ViewList() {
-  const view_list = [
-    ["View 1", "Alice Wonder", ["1", "2", "3"], "View 1"],
-    ["View 2", "Bob Ross", ["abc", "def"], "View 2"],
-    ["View 33", "John Johnson", [], "View 3"],
-  ];
+export default async function ViewList() {
+  const view_list = await fetch("http://localhost:8080/api/views/:id", {
+    method: "GET",
+  })
+    .then((res) => res.json())
+    .catch((err) => {
+      console.error("Failed to fetch projects:", err);
+    });
   return (
     <div className="flex flex-col p-6 text-white w-4/5">
       <div className="flex flex-row items-center mb-4 gap-6">
@@ -18,7 +20,7 @@ export default function ViewList() {
         </button>
       </div>
       <div className="h-150 overflow-y-auto">
-        {view_list.map((view, index) => (
+        {view_list.map((view: any, index: number) => (
           <ViewSelectItem
             name={view[0] as string}
             creator={view[1] as string}

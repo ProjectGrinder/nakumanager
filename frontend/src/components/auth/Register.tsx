@@ -1,42 +1,43 @@
 "use client";
 
 import Link from "next/link";
-import { users } from "../../Database";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 export default function Register() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
 
-  const handleRegister = () => {
+  const [message, setMessage] = useState("");
+  const router = useRouter();
+
+  const handleRegister = async () => {
     if (username == "" || password == "" || email == "") {
       alert("Please fill in every field");
       return;
     }
-    const user = users.find((user) => user[0] === username);
-    if (user) {
-      alert("Username already taken");
-      return;
-    }
+    try {
+      const res = await fetch("http://localhost:8080/api/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, email, password }),
+      });
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      alert("Please enter a valid email address");
-      return;
-    }
-    const oldEmail = users.find((oldEmail) => oldEmail[1] === email);
-    if (oldEmail) {
-      alert("Email already registered");
-      return;
-    }
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`API error: ${res.status} - ${errorText}`);
+      }
 
-    if (password.length < 8) {
-      alert("Password must be at least 8 characters");
-      return;
+      const data = await res.json();
+      setMessage(data.message);
+      router.push("/");
+    } catch (err) {
+      console.error(err);
+      setMessage("Registration failed");
     }
-
-    // users.push([username, email, password]);
-    console.log("Registration complete!");
+    console.log(message);
   };
 
   return (
@@ -91,7 +92,7 @@ export default function Register() {
             Confirm
           </button>
         </div>
-        <p className="text-color-100 font-normal text-sm">
+        <p className="text-gray-100 font-normal text-sm">
           Back to
           <Link href="/" className="ml-2 underline">
             Log in

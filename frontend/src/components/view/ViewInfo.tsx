@@ -4,6 +4,7 @@ import { FormControl, Select, MenuItem } from "@mui/material";
 import CustomDatePicker from "../CustomDatePicker";
 import { useState } from "react";
 import IssueSelectItem from "../issue/IssueSelectItem";
+import DeletePopup from "../popup/DeletePopup";
 
 export default function ViewInfo() {
   const view = {
@@ -17,6 +18,7 @@ export default function ViewInfo() {
     label: "Not set",
     endDate: new Date("2024-06-01"),
   };
+  const currentUser = "Member 1";
   const issue_list = [
     [
       "Issue 1",
@@ -90,32 +92,78 @@ export default function ViewInfo() {
       },
     },
   };
+  const canEdit = currentUser === view.creator;
   const nameChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (e.target.value.length <= 0) {
       return;
     }
     setName(e.target.value);
   };
+  const handleupdate = async () => {
+    const groupBy = [status, priority, assignee, team, project, label, endDate];
+    const response = await fetch("http://localhost:8080/api/views/:id", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name,
+        groupBy,
+      }),
+    });
+    if (!response.ok) {
+      console.error("Failed to update view");
+    }
+  };
+  const [del, setDel] = useState(false);
+  const handleDelete = async () => {
+    const response = await fetch("http://localhost:8080/api/views/:id", {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      console.error("Failed to delete view");
+    }
+  };
   return (
     <div className="flex flex-col items-start p-6 w-4/5">
-      <div className="flex-row text-white text-xl font-bold mb-4">
+      <div className="flex flex-row justify-between w-full text-white mb-4">
         <textarea
-          className="min-w-[30rem] resize-none overflow-hidden bg-transparent p-0 leading-snug focus:outline-none"
+          className="min-w-[3rem] text-xl font-bold whitespace-nowrap resize-none overflow-hidden bg-transparent p-0 leading-snug focus:outline-none"
           rows={1}
           value={name}
-          onChange={nameChange}
+          onChange={canEdit ? nameChange : undefined}
           onInput={(e) => {
             const textarea = e.currentTarget;
             textarea.style.height = "auto";
-            textarea.style.width = "auto";
-            textarea.style.height = textarea.scrollHeight + "px";
-            textarea.style.width = textarea.scrollWidth + "px";
+            textarea.style.width = "30rem";
           }}
           spellCheck={false}
           autoCorrect="off"
           autoCapitalize="off"
         ></textarea>
+        {canEdit && (
+          <div className="flex flex-row gap-6">
+            <button
+              className="px-6 py-2 bg-blue-500 text-sm text-white font-base rounded-md hover:bg-blue-700"
+              onClick={handleupdate}
+            >
+              Save
+            </button>
+            <button
+              className="px-6 py-2 bg-red-500 text-sm text-white font-base rounded-md hover:bg-red-700"
+              onClick={() => setDel(true)}
+            >
+              Delete
+            </button>
+          </div>
+        )}
       </div>
+      <DeletePopup
+        name={view.name}
+        open={del}
+        onClose={() => setDel(false)}
+        onSubmit={handleDelete}
+      ></DeletePopup>
       <div className="flex flex-col font-normal">
         <div className="flex flex-row gap-2 items-center">
           <span className="text-base text-gray-400">
@@ -131,7 +179,7 @@ export default function ViewInfo() {
               value={status}
               label="Status"
               IconComponent={() => null}
-              onChange={(e) => setStatus(e.target.value)}
+              onChange={canEdit ? (e) => setStatus(e.target.value) : undefined}
               MenuProps={menuStyle}
             >
               <MenuItem value={"Not set"}>Select Status</MenuItem>
@@ -164,7 +212,9 @@ export default function ViewInfo() {
               value={priority}
               label="Priority"
               IconComponent={() => null}
-              onChange={(e) => setPriority(e.target.value)}
+              onChange={
+                canEdit ? (e) => setPriority(e.target.value) : undefined
+              }
               MenuProps={menuStyle}
             >
               <MenuItem value={"Not set"}>Select Priority</MenuItem>
@@ -197,7 +247,9 @@ export default function ViewInfo() {
               value={assignee}
               label="Assignee"
               IconComponent={() => null}
-              onChange={(e) => setAssignee(e.target.value)}
+              onChange={
+                canEdit ? (e) => setAssignee(e.target.value) : undefined
+              }
               MenuProps={menuStyle}
             >
               <MenuItem value={"Not set"}>Select Assignee</MenuItem>
@@ -213,7 +265,7 @@ export default function ViewInfo() {
               value={team}
               label="Team"
               IconComponent={() => null}
-              onChange={(e) => setTeam(e.target.value)}
+              onChange={canEdit ? (e) => setTeam(e.target.value) : undefined}
               MenuProps={menuStyle}
             >
               <MenuItem value={"Not set"}>Select Team</MenuItem>
@@ -229,7 +281,7 @@ export default function ViewInfo() {
               value={project}
               label="Project"
               IconComponent={() => null}
-              onChange={(e) => setProject(e.target.value)}
+              onChange={canEdit ? (e) => setProject(e.target.value) : undefined}
               MenuProps={menuStyle}
             >
               <MenuItem value={"Not set"}>Select Project</MenuItem>
@@ -245,7 +297,7 @@ export default function ViewInfo() {
               value={label}
               label="Label"
               IconComponent={() => null}
-              onChange={(e) => setLabel(e.target.value)}
+              onChange={canEdit ? (e) => setLabel(e.target.value) : undefined}
               MenuProps={menuStyle}
             >
               <MenuItem value={"Not set"}>Select Label</MenuItem>
@@ -254,7 +306,14 @@ export default function ViewInfo() {
               ))}
             </Select>
           </FormControl>
-          <CustomDatePicker value={endDate} onChange={setEndDate} />
+          <CustomDatePicker
+            value={endDate}
+            onChange={(date) => {
+              if (canEdit && date) {
+                setEndDate(date);
+              } // cannot check user
+            }}
+          />
         </div>
         <hr className="border-gray-500 mt-6 mb-4"></hr>
       </div>

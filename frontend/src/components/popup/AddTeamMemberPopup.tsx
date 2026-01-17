@@ -8,15 +8,15 @@ interface PopupProps {
   onSubmit: (value: string) => void;
 }
 
-export default async function ChangeWorkspacePopup(props: PopupProps) {
-  const workspaces = await fetch("http://localhost:8080/api/workspace", {
+export default async function AddTeamMemberPopup(props: PopupProps) {
+  const members = await fetch("http://localhost:8080/api/workspace/members", {
     method: "GET",
   })
     .then((res) => res.json())
     .catch((err) => {
       console.error("Failed to fetch workspaces:", err);
     });
-  const [workspace, setWorkspace] = useState(props.current);
+  const [member, setMember] = useState(props.current);
   const style = {
     width: "auto",
     border: "none",
@@ -74,26 +74,26 @@ export default async function ChangeWorkspacePopup(props: PopupProps) {
           ×
         </button>
         <span className="text-base text-gray-200 font-semibold mb-3">
-          Select workspace
+          Add member from workspace
         </span>
         <FormControl sx={style}>
           <Select
             labelId="demo-simple-select-label"
             id="demo-simple-select"
-            value={workspace}
-            label="Workspace"
-            onChange={(e) => setWorkspace(e.target.value)}
+            value={member}
+            label="Member"
+            onChange={(e) => setMember(e.target.value)}
             MenuProps={menuStyle}
           >
-            {workspaces.map((ws: string) => (
-              <MenuItem value={ws}>{ws}</MenuItem>
+            {members.map((m: string) => (
+              <MenuItem value={m}>{m}</MenuItem>
             ))}
           </Select>
         </FormControl>
         <div className="flex justify-end space-x-2 mt-8">
           <button
             onClick={() => {
-              props.onSubmit(workspace);
+              props.onSubmit(member);
               props.onClose();
             }}
             className="px-8 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-700 text-sm"
